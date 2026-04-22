@@ -1,17 +1,18 @@
 # ComplyAI — AI Architecture
-## How the compliance checker works end to end
+## Universal EU AI Act compliance checker — all 8 High Risk categories
 
 ---
 
 ## Overview
 
-ComplyAI is AI-first. Claude does not just explain results — Claude is the compliance engine. There is no hardcoded rules logic. The system ingests raw legal documents, reasons across them, and returns structured output that drives the dashboard and PDF.
+ComplyAI is AI-first. Claude ingests raw legal documents, extracts structured rules, reasons across them with tool use, and streams the gap analysis to the dashboard in real time. The system covers all 8 High Risk categories defined in Annex III of the EU AI Act — approximately 543 rules across the full regulation.
 
-Three things happen when Sarah submits her intake form:
+The architecture has four layers:
 
-1. **Law ingestion** — Claude has already read the EU AI Act PDF and extracted structured rules (done once, stored in PostgreSQL)
-2. **Compliance reasoning** — Claude receives Sarah's intake answers + all relevant rules and reasons across them using tool use to return a structured gap list
-3. **AI output layer** — Claude streams the gap analysis to the dashboard in real time and generates the PDF narrative sections
+1. **Law ingestion** — Claude reads the EU AI Act PDF once per category and extracts structured rules
+2. **Category classification** — Claude determines which Annex III category the user's system falls under
+3. **Compliance reasoning** — Claude reasons across all relevant rules using tool use and returns structured gaps
+4. **Output** — gaps stream to dashboard in real time, Claude writes the PDF narrative
 
 ---
 
@@ -19,349 +20,375 @@ Three things happen when Sarah submits her intake form:
 
 ### What it is
 
-Instead of engineers manually reading the EU AI Act and writing rules into a JSON file, Claude reads the raw legal document and extracts the rules itself. This is done once per law and the output is stored in PostgreSQL.
+Claude ingests the full EU AI Act PDF (144 pages) and extracts all obligations for each Annex III category. This is done once per category and the results are stored in PostgreSQL and exported to the `rules/` directory. Rules are AI-extracted — not hardcoded by engineers.
 
-### How it works
-
-```
-EU AI Act PDF (144 pages)
-        ↓
-Claude API — document ingestion prompt
-        ↓
-Structured rules JSON — stored in PostgreSQL and rules/eu_ai_act.json
-```
-
-### The ingestion prompt
+### Ingestion prompt (per category)
 
 ```
-You are a legal AI specialist. I am going to give you the full text 
-of the EU AI Act. 
+You are a legal AI specialist analysing the EU AI Act.
 
-Your job:
-1. Extract every obligation that applies to hiring AI systems 
-   (resume screening, candidate ranking, automated assessment)
-2. For each obligation extract:
-   - article and sub-clause citation
-   - whether it applies to providers, deployers, or both
-   - the specific requirement in plain English
-   - severity: CRITICAL, HIGH, or MEDIUM
-   - what a non-compliant company would be missing
-   - what they need to do to fix it
-3. Return as structured JSON using the schema provided
+Extract every compliance obligation that applies to HIGH RISK AI systems 
+under Annex III, [SECTION] — [CATEGORY NAME].
 
-Only extract obligations that directly apply to hiring AI under 
-Annex III Section 4(a). Do not include general provisions that 
-do not create specific obligations for this use case.
+For each obligation extract:
+- id: unique identifier in format EU-AIA-[article]-[clause] 
+- article: exact citation (e.g. "Article 14(4)(d)")
+- title: short plain English title
+- category: the Annex III category name
+- annex_section: e.g. "Section 4(a)"
+- severity: CRITICAL, HIGH, or MEDIUM
+- applies_to: array of "provider", "deployer", or both
+- requirement: the obligation in plain English (1-2 sentences)
+- non_compliance_signal: what a non-compliant company would be missing
+- fix: concrete actionable recommendation
+- deadline: "2026-08-02" for most high-risk systems
+- related_articles: array of articles that interact with this one
+
+Only extract obligations that create specific duties for this category.
+Do not include general recitals or provisions with no specific obligation.
+Return as a JSON array.
 ```
 
-### What comes out — the rule schema
+### Rule schema
 
 ```json
 {
   "id": "EU-AIA-014-4-d",
   "article": "Article 14(4)(d)",
   "title": "Human override mechanism",
-  "category": "Human Oversight",
+  "category": "employment_hiring",
+  "annex_section": "Section 4(a)",
   "severity": "CRITICAL",
   "applies_to": ["provider", "deployer"],
   "jurisdiction": "EU",
-  "use_case": ["resume_screening", "candidate_ranking"],
   "requirement": "A designated natural person must be able to disregard, override, or reverse the output of the AI system.",
   "non_compliance_signal": "No human override mechanism exists or is documented",
-  "fix": "Assign a named role with explicit authority to override any AI recommendation. Build a UI control that logs every override or non-override decision.",
-  "deadline": "2026-08-02"
+  "fix": "Assign a named role with explicit authority to override any AI recommendation. Build a UI control that logs every override decision.",
+  "deadline": "2026-08-02",
+  "related_articles": ["Article 9", "Article 12"]
 }
 ```
 
-### Why this matters
+### Rules by category (~543 total)
 
-When the EU AI Act is amended, or when you add NYC Local Law 144, you feed Claude the new document and get a new rules file in minutes — not weeks of engineering time. The system scales to any jurisdiction without manual rule authoring.
+| Category | Annex III Section | Approx rules |
+|---|---|---|
+| Employment & hiring | 4(a) | ~88 |
+| Education & training | 3 | ~70 |
+| Essential services | 5 | ~80 |
+| Biometric identification | 1 | ~75 |
+| Critical infrastructure | 2 | ~55 |
+| Law enforcement | 6 | ~65 |
+| Migration & border control | 7 | ~60 |
+| Justice & democracy | 8 | ~50 |
+| **Total** | | **~543** |
+
+All 543 rules come from the same 144-page document. Claude ingests it once per category. Adding a new jurisdiction (NYC LL144, UK AI Framework) means feeding Claude another document — not engineering time.
 
 ---
 
-## Part 2 — Compliance Reasoning (Claude with Tool Use)
+## Part 2 — Category Classification (Claude classifies the user's system)
 
 ### What it is
 
-Claude receives Sarah's intake answers and all relevant rules, then reasons across them to identify gaps. Claude uses tool use (function calling) to return a structured gap list — not prose, not free text — machine-readable JSON that drives the dashboard and PDF.
+The intake form starts with a free-text description of the user's AI system. Claude determines which Annex III category it falls under — the user never needs to know what Annex III is.
 
-### Why tool use matters
+### Classification prompt
 
-Without tool use, Claude returns prose. You cannot reliably parse prose into a dashboard. With tool use, Claude calls a defined function with typed parameters. The output is guaranteed structured JSON every time.
+```
+You are an EU AI Act specialist.
 
-### The tool definition
+The user has described their AI system as follows:
+"[USER'S FREE TEXT DESCRIPTION]"
 
-```javascript
-const tools = [
-  {
-    name: "report_compliance_gaps",
-    description: "Report the compliance gaps identified for this AI system",
-    input_schema: {
-      type: "object",
-      properties: {
-        risk_level: {
-          type: "string",
-          enum: ["HIGH_RISK", "LIMITED_RISK", "MINIMAL_RISK", "EXEMPT"]
-        },
-        classification_basis: {
-          type: "string",
-          description: "The legal basis for the risk classification"
-        },
-        deadline: {
-          type: "string",
-          description: "Compliance deadline in ISO 8601 format"
-        },
-        gaps: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              rule_id:     { type: "string" },
-              severity:    { type: "string", enum: ["CRITICAL", "HIGH", "MEDIUM"] },
-              title:       { type: "string" },
-              article:     { type: "string" },
-              explanation: { type: "string" },
-              fix:         { type: "string" },
-              partial:     { type: "boolean" }
-            },
-            required: ["rule_id", "severity", "title", "article", "explanation", "fix"]
-          }
-        },
-        passed: {
-          type: "array",
-          items: { type: "string" },
-          description: "Rule IDs that the system is compliant with"
-        }
-      },
-      required: ["risk_level", "classification_basis", "deadline", "gaps", "passed"]
-    }
-  }
-]
+Your job:
+1. Determine which Annex III High Risk category this system falls under
+2. Determine whether the Article 6(3) exemption might apply
+3. Identify whether the user is likely a provider, deployer, or both
+4. Return structured classification using the classify_system tool
+
+Base your classification only on Annex III categories:
+- Section 1: Biometric identification and categorisation
+- Section 2: Critical infrastructure management
+- Section 3: Education and vocational training
+- Section 4: Employment, workers management, self-employment
+- Section 5: Essential private and public services
+- Section 6: Law enforcement
+- Section 7: Migration, asylum, border control
+- Section 8: Administration of justice and democratic processes
+
+If the system does not fall under any category, return NOT_IN_SCOPE.
 ```
 
-### The reasoning prompt
+### Classification tool definition
+
+```javascript
+{
+  name: "classify_system",
+  input_schema: {
+    type: "object",
+    properties: {
+      annex_section:       { type: "string" },
+      category:            { type: "string" },
+      risk_level:          { type: "string", enum: ["HIGH_RISK", "LIMITED_RISK", "MINIMAL_RISK", "NOT_IN_SCOPE"] },
+      exemption_possible:  { type: "boolean" },
+      likely_role:         { type: "string", enum: ["provider", "deployer", "both"] },
+      classification_basis:{ type: "string" },
+      follow_up_questions: { type: "array", items: { type: "string" } }
+    }
+  }
+}
+```
+
+---
+
+## Part 3 — Compliance Reasoning (Claude with Tool Use)
+
+### What it is
+
+Claude receives the user's intake answers and all rules for their specific category (filtered from PostgreSQL by `annex_section` and `role`). Claude reasons across all rules simultaneously and calls the `report_compliance_gaps` tool to return structured JSON — never prose.
+
+### Rule filtering (before sending to Claude)
+
+```sql
+SELECT * FROM rules
+WHERE annex_section = $1          -- e.g. 'Section 4(a)'
+  AND (
+    applies_to @> '["provider"]'  -- if user is provider
+    OR applies_to @> '["deployer"]' -- if user is deployer
+  )
+ORDER BY severity DESC
+```
+
+At MVP scale (88 rules, ~15k tokens) the full filtered set fits in Claude's context window. At V3 scale (500+ rules across jurisdictions) SQL filtering keeps the context manageable.
+
+### Reasoning prompt
 
 ```
 You are a compliance analyst specialising in the EU AI Act.
 
-COMPANY INTAKE:
-- System: Resume screening and candidate ranking tool
-- Built or bought: Built in-house (Provider)
-- Operates in: EU, United Kingdom
-- Automatically scores candidates: Yes
-- Role: Provider and Deployer
+SYSTEM CLASSIFICATION:
+Category: [CATEGORY]
+Annex III Section: [SECTION]
+Risk level: HIGH_RISK
+User role: [PROVIDER / DEPLOYER / BOTH]
+Jurisdictions: [LIST]
+Compliance deadline: [DATE]
 
-COMPLIANCE CHECKLIST RESPONSES:
-- Bias audit conducted: No
-- Technical documentation written: No
-- Human override mechanism: Not sure
-- Candidates informed AI is used: No
-- Staff AI literacy training: No
-- Risk management system: No
-- Logging infrastructure: No
+INTAKE ANSWERS:
+[Structured answers from intake form]
 
-EU AI ACT RULES (all rules applicable to hiring AI):
-[full rules JSON injected here]
+APPLICABLE RULES:
+[Full filtered rules JSON injected here]
 
 Your job:
-1. Classify the risk level of this system with legal basis
-2. Identify every compliance gap based on the checklist responses
-3. For partial answers (not sure) — treat as a gap but flag as needing verification
-4. Assess severity honestly — do not soften CRITICAL gaps
-5. Call the report_compliance_gaps tool with your findings
+1. Evaluate each rule against the intake answers
+2. For "not sure" answers — treat as a gap, flag partial: true
+3. Assess severity honestly — do not soften CRITICAL gaps
+4. Identify interactions between rules (e.g. Art 9 and Art 10 both require risk management)
+5. Call report_compliance_gaps with your complete findings
 
-Be direct. Do not hedge. Every gap must have a specific article citation 
-from the rules provided — never cite an article not in the rules list.
+Every gap must cite a rule_id from the rules provided.
+Never cite an article not in the rules list.
 ```
 
-### What comes out
+### Tool definition
 
-```json
+```javascript
 {
-  "risk_level": "HIGH_RISK",
-  "classification_basis": "Annex III, Section 4(a) — Employment, workers management and access to self-employment. System automatically scores and ranks candidates. Article 6(3) exemption does not apply.",
-  "deadline": "2026-08-02",
-  "gaps": [
-    {
-      "rule_id": "EU-AIA-010-2-f",
-      "severity": "CRITICAL",
-      "title": "No bias audit conducted",
-      "article": "Article 10(2)(f)",
-      "explanation": "Training data has not been examined for potential biases across protected characteristics including race, sex, age, and ethnicity. This is a direct requirement for high-risk AI systems used in employment.",
-      "fix": "Conduct an independent bias audit examining model outcomes across race, sex, age, and ethnicity before EU market placement.",
-      "partial": false
-    }
-  ],
-  "passed": ["EU-AIA-006-1"]
+  name: "report_compliance_gaps",
+  input_schema: {
+    type: "object",
+    properties: {
+      risk_level:            { type: "string" },
+      classification_basis:  { type: "string" },
+      deadline:              { type: "string" },
+      compliance_score:      { type: "integer", minimum: 0, maximum: 100 },
+      gaps: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            rule_id:     { type: "string" },
+            severity:    { type: "string", enum: ["CRITICAL", "HIGH", "MEDIUM"] },
+            title:       { type: "string" },
+            article:     { type: "string" },
+            explanation: { type: "string" },
+            fix:         { type: "string" },
+            partial:     { type: "boolean" },
+            role:        { type: "string", enum: ["provider", "deployer", "both"] }
+          },
+          required: ["rule_id", "severity", "title", "article", "explanation", "fix"]
+        }
+      },
+      passed: {
+        type: "array",
+        items: { type: "string" }
+      }
+    },
+    required: ["risk_level", "classification_basis", "deadline", "compliance_score", "gaps", "passed"]
+  }
 }
 ```
 
-This JSON is the single source of truth for the dashboard and the PDF.
+---
+
+## Part 4 — Streaming to the Dashboard
+
+Gap analysis is streamed to the dashboard in real time via Server-Sent Events (SSE). Gaps appear one by one as Claude identifies them. The AI is visible — users watch it work.
+
+```
+Backend: Claude streaming response parsed for tool_use events
+       ↓
+SSE endpoint pushes each gap as it is identified
+       ↓
+Frontend: GapCard components animate in one by one
+       ↓
+Compliance score updates in real time
+       ↓
+Final summary rendered when stream completes
+```
 
 ---
 
-## Part 3 — Streaming to the Dashboard
+## Part 5 — Follow-Up Q&A with RAG (V2)
 
-### What it is
-
-Instead of a loading spinner while Claude processes, the gap analysis streams to the dashboard in real time. Gaps appear one by one as Claude identifies them. The AI is visible — users see it working.
-
-### How it works
+After seeing their gap analysis, users ask free-text follow-up questions. Rules are embedded and stored in Pinecone per category. User question is embedded, relevant chunks retrieved, Claude answers grounded in the source.
 
 ```
-Backend streams Claude response via Server-Sent Events (SSE)
-        ↓
-Frontend receives stream, renders gaps as they arrive
-        ↓
-Each gap card animates in as Claude identifies it
-        ↓
-Compliance score updates in real time as gaps accumulate
+User: "What exactly counts as a bias audit under Article 10 for credit scoring AI?"
+       ↓
+Embed question → query Pinecone (filtered by category: essential_services)
+       ↓
+Retrieve top 5 relevant rule chunks
+       ↓
+Send chunks + question to Claude
+       ↓
+Claude answers with exact article citations from retrieved chunks
 ```
-
-### Why this matters for the demo
-
-Streaming makes the AI visible. Instead of "we ran some logic," the user watches Claude read their answers and surface gaps in real time. It demonstrates genuine intelligence, not a lookup table.
 
 ---
 
-## Part 4 — Follow-Up Q&A with RAG (V2)
+## Part 6 — Multi-Jurisdiction Conflict Detection (V3)
 
-### What it is
+When a company operates across EU + NYC + Illinois, Claude reasons across all frameworks simultaneously:
 
-After seeing their gaps, users ask free-text follow-up questions. This is the only place RAG is used — and it is used correctly here because the user is asking an open-ended question Claude cannot answer reliably from context alone.
-
-### How it works
-
-```
-User types: "What exactly counts as a bias audit under Article 10?"
-        ↓
-Question is embedded (text-embedding-3-small or Claude embeddings)
-        ↓
-Pinecone retrieves the 3–5 most relevant rule chunks
-        ↓
-Retrieved chunks + question sent to Claude
-        ↓
-Claude answers grounded in the retrieved source text
-        ↓
-Answer displayed with citations
-```
-
-### Why RAG here and not earlier
-
-For the gap analysis, all 88 rules (~15,000 tokens) fit in Claude's context window. No retrieval needed — Claude sees everything. For follow-up Q&A, the user is asking an open-ended question. You cannot predict which rules are relevant in advance. Embeddings + retrieval is the right tool for this job.
-
----
-
-## Part 5 — Multi-Jurisdiction Conflict Detection (V3)
-
-### What it is
-
-When a company operates in multiple jurisdictions (EU + NYC + Illinois), Claude reasons across all applicable frameworks simultaneously and identifies:
-- Where requirements overlap (satisfy once, compliant everywhere)
-- Where requirements conflict (EU says 6 months retention, California says 4 years — California wins)
-- What the strictest single requirement is across all jurisdictions
-
-### Why only AI can do this
-
-No deterministic rules engine can reason about conflicts between laws. It requires understanding the intent of each requirement, comparing them semantically, and making a judgement about which is stricter. This is exactly what Claude is good at.
+- Where requirements overlap → satisfy once, compliant everywhere
+- Where requirements conflict → flags the stricter requirement
+- Jurisdiction-specific deadlines → compliance timeline per law
 
 ---
 
 ## End to End Flow
 
 ```
-LAW INGESTION (done once per law)
-EU AI Act PDF → Claude → structured rules JSON → PostgreSQL
+LAW INGESTION (once per category)
+EU AI Act PDF → Claude → ~543 rules → PostgreSQL + rules/*.json
 
-                    ↓
+                         ↓
 
-USER SUBMITS INTAKE FORM
-        ↓
-┌─────────────────────────┐
-│  JURISDICTION FILTER     │  SQL query: rules where
-│                         │  jurisdiction IN user.jurisdictions
-│  88 rules → filtered    │  AND use_case = resume_screening
-└──────────┬──────────────┘
+USER DESCRIBES THEIR AI SYSTEM (free text)
+              ↓
+┌─────────────────────────────┐
+│  CLAUDE CLASSIFICATION       │  classify_system tool
+│                             │  → Annex III category
+│  "resume screening tool"    │  → risk level
+│  → Section 4(a), HIGH_RISK  │  → role (provider/deployer)
+└──────────┬──────────────────┘
            ↓
-┌─────────────────────────┐
-│  CLAUDE REASONING        │  intake answers + filtered rules
-│  with tool use           │  → report_compliance_gaps()
-│                         │  → structured gap list JSON
-└──────────┬──────────────┘
+INTAKE FORM (category-specific questions)
            ↓
-┌─────────────────────────┐
-│  STREAMING SSE           │  gaps stream to dashboard
-│                         │  one by one in real time
-└──────────┬──────────────┘
+┌─────────────────────────────┐
+│  SQL RULE FILTER             │  WHERE annex_section = '4(a)'
+│                             │  AND applies_to includes role
+│  ~543 rules → ~88 rules     │  ORDER BY severity DESC
+└──────────┬──────────────────┘
            ↓
-┌─────────────────────────┐
-│  DASHBOARD               │  React renders gap cards
-│  + PDF GENERATOR         │  PDFKit assembles report
-│                         │  Claude writes narrative
-└──────────┬──────────────┘
+┌─────────────────────────────┐
+│  CLAUDE REASONING            │  intake answers + filtered rules
+│  with tool use               │  → report_compliance_gaps()
+│                             │  → structured gap list JSON
+└──────────┬──────────────────┘
            ↓
-┌─────────────────────────┐
-│  FOLLOW-UP Q&A           │  User asks free-text question
-│  (V2, RAG)               │  Pinecone retrieves chunks
-│                         │  Claude answers with citations
-└─────────────────────────┘
+┌─────────────────────────────┐
+│  STREAMING SSE               │  gaps stream to dashboard
+│                             │  one by one in real time
+│                             │  compliance score updates live
+└──────────┬──────────────────┘
+           ↓
+┌─────────────────────────────┐
+│  DASHBOARD + PDF             │  React renders gap cards
+│                             │  PDFKit assembles report
+│                             │  Claude writes narrative
+└──────────┬──────────────────┘
+           ↓ (V2)
+┌─────────────────────────────┐
+│  FOLLOW-UP Q&A (RAG)         │  Pinecone retrieves chunks
+│                             │  Claude answers with citations
+└─────────────────────────────┘
 ```
 
 ---
 
-## What Lives Where in the Codebase
+## Codebase map
 
 ```
 complyai/
 ├── rules/
-│   └── eu_ai_act.json          ← AI-extracted rules (Claude output, not human-authored)
+│   ├── eu_ai_act_employment.json       ← Category 1 (MVP)
+│   ├── eu_ai_act_education.json        ← Category 2
+│   ├── eu_ai_act_essential_services.json
+│   ├── eu_ai_act_biometric.json
+│   ├── eu_ai_act_infrastructure.json
+│   ├── eu_ai_act_law_enforcement.json
+│   ├── eu_ai_act_migration.json
+│   └── eu_ai_act_justice.json
 │
 ├── backend/
 │   ├── engine/
-│   │   ├── ingestor.js         ← Sends legal PDF to Claude, stores extracted rules
-│   │   └── classifier.js       ← Determines jurisdiction filter from intake answers
+│   │   ├── ingestor.js         ← Sends PDF to Claude, stores extracted rules
+│   │   └── classifier.js       ← Claude classifies user's system into Annex III category
 │   │
 │   ├── ai/
-│   │   ├── claudeClient.js     ← Anthropic SDK — reasoning + streaming + tool use
-│   │   ├── tools.js            ← Tool definitions (report_compliance_gaps)
-│   │   └── prompts.js          ← All prompt templates
+│   │   ├── claudeClient.js     ← Anthropic SDK — streaming + tool use
+│   │   ├── tools.js            ← Tool definitions: classify_system, report_compliance_gaps
+│   │   └── prompts.js          ← All prompt templates per category
 │   │
 │   ├── pdf/
-│   │   └── reportGenerator.js  ← PDFKit — assembles gap list + Claude narrative
+│   │   └── reportGenerator.js  ← PDFKit — gap list + Claude narrative
 │   │
 │   └── api/
 │       ├── intake.js           ← POST /api/intake
+│       ├── classify.js         ← POST /api/classify
 │       ├── report.js           ← GET /api/report/:id
-│       ├── stream.js           ← GET /api/stream/:id (SSE streaming endpoint)
-│       ├── chat.js             ← POST /api/chat (follow-up Q&A, V2)
+│       ├── stream.js           ← GET /api/stream/:id (SSE)
+│       ├── chat.js             ← POST /api/chat (V2 RAG Q&A)
 │       └── pdf.js              ← GET /api/pdf/:id
 │
 └── frontend/
     ├── pages/
-    │   ├── index.js            ← Landing page
-    │   ├── intake.js           ← Intake form
+    │   ├── index.js            ← Landing — describe your AI
+    │   ├── intake.js           ← Category-specific intake form
     │   ├── dashboard.js        ← Streaming gap analysis
-    │   └── report/[id].js      ← Shareable report link
+    │   └── report/[id].js      ← Shareable report
     │
     └── components/
-        ├── GapCard.js          ← Gap with expand/collapse + streaming animation
-        ├── RiskBadge.js        ← HIGH-RISK badge + classification text
-        ├── StreamingDashboard.js ← Renders gaps as SSE stream arrives
-        └── DownloadButton.js   ← Triggers PDF generation
+        ├── CategorySelector.js     ← AI classifies system from free text
+        ├── StreamingDashboard.js   ← Renders gaps as SSE stream arrives
+        ├── GapCard.js              ← Individual gap with role badge
+        ├── RiskBadge.js            ← HIGH-RISK badge + Annex III section
+        ├── ComplianceScore.js      ← Live score updating during stream
+        └── DownloadButton.js       ← PDF generation trigger
 ```
 
 ---
 
-## What Keeps This Legally Defensible
+## Legal defensibility
 
-**1. Claude never invents citations**
-Every gap must cite a rule ID from the rules JSON passed in the prompt. The prompt explicitly instructs Claude not to cite articles not in the provided list. Tool use enforces this — the `rule_id` field must match a known rule.
+**Claude never invents citations** — every gap must reference a `rule_id` from the JSON passed in the prompt. Tool use enforces typed output.
 
-**2. Rules are version-controlled**
-`eu_ai_act.json` is in git. Every change — including AI-extracted updates — is tracked and reviewable. If a regulation is amended, the change is visible in the diff.
+**Rules are version-controlled** — `rules/*.json` files are in git. Every AI-extracted update is tracked and reviewable.
 
-**3. The AI extraction is auditable**
-The ingestor logs every Claude response during law ingestion. A human can review the extracted rules before they are published to production. The AI does the work, a human approves it.
+**Human review gate** — law ingestion logs every Claude response. A human reviews extracted rules before publishing to production.
 
-**4. Structured output via tool use**
-Claude cannot return a vague or hedged response. Tool use forces a typed, structured output. Either a gap is reported with a rule ID and severity, or it is not reported. No ambiguity.
+**Structured output only** — tool use forces typed, machine-readable JSON. No ambiguous prose in the gap list.

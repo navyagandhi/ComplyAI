@@ -1,0 +1,489 @@
+# PA Agent Team - Feature Specification
+# EU AI Act Law Ingestion Pipeline — ComplyAI
+
+---
+# ============================================================================
+# METADATA
+# ============================================================================
+spec_version: "1.0"
+feature_id: "FEATURE-001"
+created_date: "2026-04-24"
+author: "navyagandhi"
+priority: "critical"
+
+# ============================================================================
+# CONTEXT (Why are we building this?)
+# ============================================================================
+context:
+  one_line_summary: |
+    Build the law ingestion pipeline that feeds the EU AI Act PDF to Claude, extracts ~88 structured compliance rules for hiring AI (Annex III Section 4a), validates them, stores them in PostgreSQL, and writes them to rules/eu_ai_act_employment.json.
+
+  problem:
+    description: |
+      ComplyAI is an AI-first compliance checker for High Risk AI systems under the EU AI Act.
+      The entire product depends on having structured, accurate, citable compliance rules extracted
+      from the raw legal document. Without this pipeline, there are no rules, no gap analysis,
+      no dashboard, and no PDF report. This is the foundation layer — everything else builds on it.
+
+      The key innovation is that rules are AI-extracted, not hardcoded by engineers. This means
+      adding a new jurisdiction or category is a single ingestion run, not weeks of manual work.
+
+    pain_points:
+      - "No structured rules exist yet — the entire compliance engine is blocked"
+      - "Manually reading a 144-page legal document and encoding rules as JSON is weeks of work"
+      - "Manual extraction is error-prone — easy to miss obligations, miscite articles, or misclassify severity"
+      - "Scaling to 8 categories and multiple jurisdictions is impossible without automated ingestion"
+
+  business_impact:
+    - "Unblocks all downstream features: gap analysis, dashboard, PDF reports"
+    - "Reduces time-to-add-new-jurisdiction from weeks to minutes"
+    - "Demonstrates core AI capability: document understanding and structured extraction"
+    - "Creates the single source of truth for all compliance checks"
+
+  success_metrics:
+    - metric: "Rule extraction completeness"
+      target: "88+ rules extracted covering all key articles (4, 9, 10, 11, 12, 13, 14, 15, 26, 27, 43, 48, 49)"
+    - metric: "Citation accuracy"
+      target: "100% of extracted rules cite real EU AI Act articles — zero hallucinated citations"
+    - metric: "Ingestion time"
+      target: "Full extraction completes in under 5 minutes"
+    - metric: "Schema validation"
+      target: "100% of extracted rules pass JSON schema validation"
+
+# ============================================================================
+# REQUIREMENTS (What needs to be built?)
+# ============================================================================
+requirements:
+  user_stories:
+    - id: "US-001"
+      as_a: "system administrator"
+      i_want_to: "run the law ingestion pipeline against the EU AI Act PDF"
+      so_that: "structured compliance rules are extracted and stored for use by the compliance engine"
+      acceptance_criteria:
+        - "Pipeline accepts a PDF file path as input"
+        - "PDF text is extracted using pdf-parse"
+        - "Extracted text is sent to Claude with the ingestion prompt"
+        - "Claude returns structured JSON array of rules"
+        - "Each rule conforms to the defined schema"
+        - "Rules are stored in the PostgreSQL rules table"
+        - "Rules are written to rules/eu_ai_act_employment.json"
+        - "A full ingestion log is saved for human review"
+
+    - id: "US-002"
+      as_a: "system administrator"
+      i_want_to: "validate the extracted rules before they go to production"
+      so_that: "no incorrect or hallucinated rules reach the compliance engine"
+      acceptance_criteria:
+        - "Every extracted rule is validated against the JSON schema"
+        - "Rules with missing required fields are rejected and logged"
+        - "Rules with duplicate IDs are flagged"
+        - "Ingestion output is written to a review log (JSON) with timestamp"
+        - "Rules are not written to the production JSON file until explicitly approved"
+
+    - id: "US-003"
+      as_a: "developer adding a new category"
+      i_want_to: "run the ingestion pipeline for a different Annex III category"
+      so_that: "I can extract rules for education, finance, biometrics, etc. using the same pipeline"
+      acceptance_criteria:
+        - "Pipeline accepts a category parameter (e.g. employment_hiring, education, essential_services)"
+        - "The ingestion prompt is parameterised by category and Annex III section"
+        - "Output file is named by category (e.g. eu_ai_act_education.json)"
+        - "The same schema and validation applies regardless of category"
+
+  functional_requirements:
+    - id: "FR-001"
+      category: "PDF Processing"
+      requirement: "Extract raw text from the EU AI Act PDF"
+      details:
+        - "Use pdf-parse npm package to read PDF and extract text"
+        - "Handle multi-page extraction (144 pages)"
+        - "Preserve article numbering and section structure in extracted text"
+        - "Return full text as a string for Claude input"
+
+    - id: "FR-002"
+      category: "Claude Integration"
+      requirement: "Send extracted text to Claude with structured ingestion prompt"
+      details:
+        - "Use Anthropic SDK (@anthropic-ai/sdk)"
+        - "Model: claude-sonnet-4-6 (claude-sonnet-4-6)"
+        - "Send the full PDF text as context"
+        - "Include the category-specific ingestion prompt"
+        - "Use tool use (function calling) to enforce structured JSON output"
+        - "Set max_tokens high enough for ~88 rules (~30,000 tokens)"
+        - "Handle token limits — if PDF exceeds context window, chunk by section"
+
+    - id: "FR-003"
+      category: "Tool Use"
+      requirement: "Define a Claude tool for structured rule extraction"
+      details:
+        - "Tool name: extract_compliance_rules"
+        - "Input schema enforces required fields: id, article, title, category, annex_section, severity, applies_to, requirement, non_compliance_signal, fix, deadline"
+        - "Optional fields: related_articles, jurisdiction"
+        - "Severity enum: CRITICAL, HIGH, MEDIUM"
+        - "applies_to enum: provider, deployer (array)"
+        - "Tool use ensures Claude returns valid structured JSON — not prose"
+
+    - id: "FR-004"
+      category: "Validation"
+      requirement: "Validate every extracted rule against the JSON schema"
+      details:
+        - "Use ajv (JSON schema validator) to validate each rule"
+        - "Reject rules with missing required fields"
+        - "Flag duplicate rule IDs"
+        - "Validate severity is one of CRITICAL, HIGH, MEDIUM"
+        - "Validate applies_to contains only provider and/or deployer"
+        - "Validate deadline is a valid ISO date"
+        - "Log validation errors with rule details for debugging"
+
+    - id: "FR-005"
+      category: "Storage"
+      requirement: "Store validated rules in PostgreSQL and write to JSON file"
+      details:
+        - "Insert each rule into the rules table (schema needs to be created/updated)"
+        - "Write full rule array to rules/eu_ai_act_[category].json"
+        - "Include ingestion metadata: timestamp, model used, category, total rules extracted"
+        - "Store ingestion log in a separate ingestion_logs table for audit trail"
+
+    - id: "FR-006"
+      category: "Logging"
+      requirement: "Log the full ingestion run for human review"
+      details:
+        - "Log: PDF file path, category, model used, timestamp"
+        - "Log: total rules extracted, rules passed validation, rules failed validation"
+        - "Log: full Claude response (raw) for audit"
+        - "Write log to backend/logs/ingestion-[timestamp].json"
+        - "Console output with summary stats"
+
+    - id: "FR-007"
+      category: "API"
+      requirement: "Expose ingestion as a backend API endpoint and CLI command"
+      details:
+        - "POST /api/ingest — accepts { pdfPath, category } — runs ingestion"
+        - "CLI: node backend/engine/ingestor.js --pdf ./path/to/eu-ai-act.pdf --category employment_hiring"
+        - "Both trigger the same pipeline"
+        - "Return summary: { total_extracted, passed_validation, failed_validation, output_file }"
+
+  non_functional_requirements:
+    - id: "NFR-001"
+      category: "Performance"
+      requirement: "Full ingestion completes in under 5 minutes"
+      measurement: "Time from PDF input to rules JSON written"
+
+    - id: "NFR-002"
+      category: "Reliability"
+      requirement: "Ingestion is idempotent — running twice produces the same output"
+      measurement: "Same PDF + same category = same rules (deterministic with temperature 0)"
+
+    - id: "NFR-003"
+      category: "Scalability"
+      requirement: "Pipeline handles PDFs up to 200 pages without failure"
+      measurement: "Test with EU AI Act (144 pages) and other regulation PDFs"
+
+    - id: "NFR-004"
+      category: "Auditability"
+      requirement: "Every ingestion run is fully logged and traceable"
+      measurement: "Every production rule can be traced back to a specific ingestion run"
+
+  product_standards:
+    - id: "SEC-001"
+      name: "API input validation for ingestion endpoint"
+      why_applicable: "POST /api/ingest accepts file path and category — must be validated"
+      acceptance_criteria: "Invalid category values rejected with 400; file path validated; no path traversal"
+
+    - id: "SEC-002"
+      name: "API key security"
+      why_applicable: "Anthropic API key used in ingestion — must not be logged or exposed"
+      acceptance_criteria: "API key read from env vars only; never logged; never in error messages"
+
+    - id: "PERF-001"
+      name: "Ingestion performance within acceptable bounds"
+      why_applicable: "Ingestion involves large PDF processing and Claude API call"
+      acceptance_criteria: "Full ingestion completes in under 5 minutes; timeout handling for Claude API"
+
+# ============================================================================
+# DATA MODEL (What data structures are needed?)
+# ============================================================================
+data_model:
+  interfaces: |
+    /**
+     * Severity levels for compliance rules
+     */
+    enum Severity {
+      CRITICAL = 'CRITICAL',
+      HIGH = 'HIGH',
+      MEDIUM = 'MEDIUM'
+    }
+
+    /**
+     * Who the rule applies to
+     */
+    enum RoleType {
+      PROVIDER = 'provider',
+      DEPLOYER = 'deployer'
+    }
+
+    /**
+     * Annex III categories
+     */
+    enum AnnexCategory {
+      EMPLOYMENT_HIRING = 'employment_hiring',
+      EDUCATION = 'education',
+      ESSENTIAL_SERVICES = 'essential_services',
+      BIOMETRIC = 'biometric',
+      INFRASTRUCTURE = 'infrastructure',
+      LAW_ENFORCEMENT = 'law_enforcement',
+      MIGRATION = 'migration',
+      JUSTICE = 'justice'
+    }
+
+    /**
+     * A single compliance rule extracted by Claude
+     */
+    interface ComplianceRule {
+      id: string;                    // e.g. "EU-AIA-014-4-d"
+      article: string;              // e.g. "Article 14(4)(d)"
+      title: string;                // e.g. "Human override mechanism"
+      category: AnnexCategory;
+      annex_section: string;        // e.g. "Section 4(a)"
+      severity: Severity;
+      applies_to: RoleType[];       // ["provider", "deployer"]
+      jurisdiction: string;         // "EU"
+      requirement: string;          // Plain English obligation
+      non_compliance_signal: string; // What a non-compliant company is missing
+      fix: string;                  // Concrete fix recommendation
+      deadline: string;             // ISO date "2026-08-02"
+      related_articles?: string[];  // ["Article 9", "Article 12"]
+    }
+
+    /**
+     * Ingestion run metadata
+     */
+    interface IngestionLog {
+      id: string;
+      pdf_path: string;
+      category: AnnexCategory;
+      model: string;
+      timestamp: string;
+      total_extracted: number;
+      passed_validation: number;
+      failed_validation: number;
+      output_file: string;
+      raw_response?: string;
+    }
+
+  database_changes:
+    - file: "infra/db/schema.sql"
+      change: |
+        Add rules table:
+        CREATE TABLE IF NOT EXISTS rules (
+          id VARCHAR(50) PRIMARY KEY,
+          article VARCHAR(100) NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          category VARCHAR(50) NOT NULL,
+          annex_section VARCHAR(50) NOT NULL,
+          severity VARCHAR(20) NOT NULL CHECK (severity IN ('CRITICAL', 'HIGH', 'MEDIUM')),
+          applies_to JSONB NOT NULL,
+          jurisdiction VARCHAR(20) DEFAULT 'EU',
+          requirement TEXT NOT NULL,
+          non_compliance_signal TEXT NOT NULL,
+          fix TEXT NOT NULL,
+          deadline DATE,
+          related_articles JSONB,
+          ingestion_run_id UUID,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+
+        Add ingestion_logs table:
+        CREATE TABLE IF NOT EXISTS ingestion_logs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          pdf_path TEXT NOT NULL,
+          category VARCHAR(50) NOT NULL,
+          model VARCHAR(100) NOT NULL,
+          total_extracted INTEGER,
+          passed_validation INTEGER,
+          failed_validation INTEGER,
+          output_file TEXT,
+          raw_response TEXT,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+
+# ============================================================================
+# API CHANGES (How does the API change?)
+# ============================================================================
+api_changes:
+  endpoints_added:
+    - path: "/api/ingest"
+      method: "POST"
+      description: "Run the law ingestion pipeline"
+      request_example: |
+        {
+          "pdfPath": "./laws/eu-ai-act.pdf",
+          "category": "employment_hiring"
+        }
+      response_example: |
+        {
+          "success": true,
+          "ingestionId": "abc-123",
+          "totalExtracted": 88,
+          "passedValidation": 86,
+          "failedValidation": 2,
+          "outputFile": "rules/eu_ai_act_employment.json",
+          "failures": [
+            {
+              "rule": { "id": "EU-AIA-XXX", "article": "..." },
+              "error": "Missing required field: non_compliance_signal"
+            }
+          ]
+        }
+
+# ============================================================================
+# FILES TO CREATE / MODIFY
+# ============================================================================
+files:
+  create:
+    - path: "backend/engine/ingestor.js"
+      purpose: "Main ingestion pipeline — orchestrates PDF parsing, Claude call, validation, storage"
+
+    - path: "backend/ai/tools.js"
+      purpose: "Claude tool definitions — extract_compliance_rules schema"
+
+    - path: "backend/ai/prompts.js"
+      purpose: "Ingestion prompt templates parameterised by category"
+
+    - path: "backend/ai/claudeClient.js"
+      purpose: "Anthropic SDK wrapper — handles API calls, streaming, tool use parsing"
+
+    - path: "backend/engine/validator.js"
+      purpose: "JSON schema validation for extracted rules using ajv"
+
+    - path: "backend/db/rules.js"
+      purpose: "PostgreSQL queries — insert rules, insert ingestion log, query rules by category"
+
+    - path: "backend/api/ingest.js"
+      purpose: "Express route handler for POST /api/ingest"
+
+  modify:
+    - path: "infra/db/schema.sql"
+      purpose: "Add rules and ingestion_logs tables"
+
+    - path: "backend/package.json"
+      purpose: "Add pdf-parse and ajv dependencies"
+
+    - path: "backend/index.js"
+      purpose: "Wire up /api/ingest route"
+
+    - path: ".env.example"
+      purpose: "Already has ANTHROPIC_API_KEY — no changes needed"
+
+# ============================================================================
+# EVALS (How do we validate success?)
+# ============================================================================
+evals:
+  test_dataset: |
+    {"input": {"action": "ingest", "pdf": "eu-ai-act.pdf", "category": "employment_hiring"}, "ideal": {"total_extracted": ">=80", "passed_validation": ">=80"}}
+    {"input": {"action": "ingest", "pdf": "eu-ai-act.pdf", "category": "employment_hiring"}, "ideal": {"articles_covered": ["Article 4", "Article 9", "Article 10", "Article 11", "Article 12", "Article 13", "Article 14"]}}
+    {"input": {"action": "validate_rule", "rule": {"id": "EU-AIA-014-4-d", "article": "Article 14(4)(d)", "severity": "CRITICAL"}}, "ideal": {"validation": "pass"}}
+    {"input": {"action": "validate_rule", "rule": {"id": null, "article": "Article 14"}}, "ideal": {"validation": "fail", "error": "Missing required field: id"}}
+    {"input": {"action": "validate_rule", "rule": {"id": "EU-AIA-014", "severity": "EXTREME"}}, "ideal": {"validation": "fail", "error": "Invalid severity"}}
+    {"input": {"action": "ingest", "pdf": "nonexistent.pdf", "category": "employment_hiring"}, "ideal": {"error": "PDF file not found"}}
+    {"input": {"action": "ingest", "pdf": "eu-ai-act.pdf", "category": "invalid_category"}, "ideal": {"error": "Invalid category"}}
+    {"input": {"action": "check_duplicates", "rules": [{"id": "EU-AIA-014"}, {"id": "EU-AIA-014"}]}, "ideal": {"duplicates_found": 1}}
+    {"input": {"action": "check_schema", "rule": {"id": "EU-AIA-010", "applies_to": ["provider"]}}, "ideal": {"validation": "pass"}}
+    {"input": {"action": "check_schema", "rule": {"id": "EU-AIA-010", "applies_to": ["alien"]}}, "ideal": {"validation": "fail"}}
+
+  passing_threshold: 0.90
+
+  validation_criteria:
+    - "80+ rules extracted from EU AI Act for employment/hiring"
+    - "All key articles covered: 4, 9, 10, 11, 12, 13, 14, 15, 26, 27, 43, 48, 49"
+    - "Zero hallucinated article citations"
+    - "100% of stored rules pass JSON schema validation"
+    - "Ingestion log written with complete metadata"
+    - "CLI and API produce identical output"
+    - "Pipeline handles missing PDF gracefully"
+    - "Pipeline handles invalid category gracefully"
+
+# ============================================================================
+# OPEN QUESTIONS
+# ============================================================================
+open_questions:
+  - question: "Should we chunk the PDF by article/section before sending to Claude, or send the full text?"
+    blocking: false
+    assigned_to: "Developer"
+    notes: "Full text is ~100k tokens. Claude claude-sonnet-4-6 has 200k context. Should fit, but test."
+
+  - question: "Should the ingestion run require manual approval before writing to the production JSON?"
+    blocking: false
+    assigned_to: "Product"
+    notes: "Current design writes to a staging file. Human reviews. Then promotes to production."
+
+  - question: "Do we need to source the official EU AI Act PDF, or can we use the published text from EUR-Lex?"
+    blocking: true
+    assigned_to: "navyagandhi"
+    notes: "EUR-Lex has the official consolidated text. PDF or HTML — both work with different parsers."
+
+# ============================================================================
+# OUT OF SCOPE
+# ============================================================================
+out_of_scope:
+  - "Ingestion for non-EU jurisdictions (NYC LL144, Illinois, etc.) — same pipeline, future category"
+  - "Automatic re-ingestion when law is amended — manual trigger for now"
+  - "Frontend UI for ingestion — CLI and API only for now"
+  - "Multi-language ingestion — English only for MVP"
+  - "Embedding rules into Pinecone — that is a V2 feature for follow-up Q&A"
+
+# ============================================================================
+# DEPENDENCIES
+# ============================================================================
+dependencies:
+  - dependency: "EU AI Act PDF or HTML source document"
+    type: "external"
+    status: "pending"
+    owner: "navyagandhi"
+    blocks: "Cannot run ingestion without source document"
+
+  - dependency: "Anthropic API key"
+    type: "external"
+    status: "pending"
+    owner: "navyagandhi"
+    blocks: "Cannot call Claude API without key"
+
+  - dependency: "PostgreSQL running locally via Docker"
+    type: "internal"
+    status: "ready"
+    owner: "Team"
+    blocks: "Cannot store rules without database"
+
+# ============================================================================
+# RISKS
+# ============================================================================
+risks:
+  - risk: "Claude misses obligations or extracts incorrect severity"
+    probability: "medium"
+    impact: "high"
+    mitigation: "Human review step before production. Log raw Claude response. Run ingestion multiple times and compare."
+
+  - risk: "EU AI Act PDF exceeds Claude's context window"
+    probability: "low"
+    impact: "medium"
+    mitigation: "PDF is ~100k tokens. Claude claude-sonnet-4-6 supports 200k. If exceeded, chunk by Part/Title."
+
+  - risk: "Claude hallucinates article citations"
+    probability: "low"
+    impact: "critical"
+    mitigation: "Tool use enforces structured output. Post-extraction validation can cross-check article numbers against a known list."
+
+  - risk: "pdf-parse fails on complex PDF formatting"
+    probability: "medium"
+    impact: "medium"
+    mitigation: "Fall back to HTML source from EUR-Lex if PDF parsing is unreliable."
+
+# ============================================================================
+# NOTES
+# ============================================================================
+notes: |
+  - This is the foundation feature. Every other ComplyAI feature depends on having rules in the database.
+  - The same pipeline will be reused for all 8 Annex III categories and future jurisdictions.
+  - Temperature should be set to 0 for deterministic extraction.
+  - The ingestion prompt and tool schema are defined in docs/rules-engine.md — implementation should match.
+  - Priority: ship this first, validate the rules, then build the compliance reasoning feature.

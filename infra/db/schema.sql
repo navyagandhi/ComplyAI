@@ -33,3 +33,34 @@ CREATE TABLE IF NOT EXISTS pdf_exports (
   file_path TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS rules (
+  id VARCHAR(50) PRIMARY KEY,
+  article VARCHAR(100) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  annex_section VARCHAR(50) NOT NULL,
+  severity VARCHAR(20) NOT NULL CHECK (severity IN ('CRITICAL', 'HIGH', 'MEDIUM')),
+  applies_to JSONB NOT NULL,
+  jurisdiction VARCHAR(20) DEFAULT 'EU',
+  requirement TEXT NOT NULL,
+  non_compliance_signal TEXT NOT NULL,
+  fix TEXT NOT NULL,
+  deadline DATE,
+  related_articles JSONB,
+  ingestion_run_id UUID,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ingestion_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pdf_path TEXT NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  model VARCHAR(100) NOT NULL,
+  total_extracted INTEGER,
+  passed_validation INTEGER,
+  failed_validation INTEGER,
+  output_file TEXT,
+  raw_response TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);

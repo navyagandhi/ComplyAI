@@ -12,7 +12,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'complyai-backend' })
 })
 
-// Routes (wired up as they are built)
+// Routes
+const { handleIngest } = require('./api/ingest')
+app.post('/api/ingest', handleIngest)
+
+// Future routes (wired up as they are built)
 // app.use('/api/intake', require('./api/intake'))
 // app.use('/api/report', require('./api/report'))
 // app.use('/api/pdf',    require('./api/pdf'))

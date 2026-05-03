@@ -21,7 +21,7 @@ Starting with EU AI Act hiring AI in MVP — then expanding to all 8 Annex III c
 | EU AI Act — Hiring AI (Art 9–49) | EU | Deadline Aug 2026 | MVP |
 | NYC Local Law 144 | US-NY | In force July 2023 | V1.2 |
 | Illinois AI Video Interview Act | US-IL | In force 2020 | V1.2 |
-| California AB 2930 | US-CA | In force Jan 2026 | V3.0 |
+| California AB 2930 | US-CA | **Died** — Senate Nov 2024 | N/A |
 | Colorado SB 205 | US-CO | In force Feb 2026 | V3.0 |
 | EU AI Act — Education, Finance | EU | Deadline Aug 2026 | V3.0 |
 | EU AI Act — All 8 categories | EU | Deadline Aug 2026 | V3.1 |
@@ -153,7 +153,7 @@ These are enforced at build time, not aspirational.
 - GDPR interaction Q&A
 
 ### V3.0 — Full US hiring law coverage
-- California AB 2930 (Jan 2026), Colorado SB 205 (Feb 2026)
+- Colorado SB 205 (Feb 2026) — note: California AB 2930 died in Senate Nov 2024, monitor for successor bill
 - EEOC AI guidance (Title VII)
 - EU AI Act categories 2–3 (Education, Essential Services)
 

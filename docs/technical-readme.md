@@ -100,7 +100,7 @@ Users watch Claude identify gaps in real time. The AI is not a black box behind 
 | EU AI Act — Hiring AI (Art 9–49) | EU | Deadline Aug 2026 | MVP |
 | NYC Local Law 144 | US-NY | In force July 2023 | V1.2 |
 | Illinois AI Video Interview Act | US-IL | In force 2020 | V1.2 |
-| California AB 2930 | US-CA | In force Jan 2026 | V3.0 |
+| California AB 2930 | US-CA | **Died** — Senate Nov 2024 | N/A — monitor for successor |
 | Colorado SB 205 | US-CO | In force Feb 2026 | V3.0 |
 | EU AI Act — all 8 categories | EU | Deadline Aug 2026 | V3.1 |
 
@@ -261,7 +261,7 @@ ADMIN_API_KEY=              # For POST /api/v1/ingest (internal use)
 | **V2.0** | Compliance workspace, stale alerts, shareable link, audit history |
 | **V2.1** | Evidence upload + Claude coverage check |
 | **V2.2** | Follow-up Q&A with RAG (Pinecone) |
-| **V3.0** | CA AB 2930, CO SB 205, EEOC guidance, EU AI Act categories 2–3 |
+| **V3.0** | CO SB 205, EEOC guidance, EU AI Act categories 2–3; monitor CA for AB 2930 successor |
 | **V3.1** | All 8 EU AI Act categories |
 | **V4.0** | API access, team collaboration, vendor compliance directory |
 

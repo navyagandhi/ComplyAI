@@ -281,5 +281,5 @@ As any user, I want to ask cross-jurisdiction questions like "does NYC LL144 req
 | **Total EU AI Act** | | | **~543** | |
 | NYC Local Law 144 | N/A | Bias audit + disclosure | ~15 | V1.2 |
 | Illinois AI Video Act | N/A | Disclosure + consent | ~8 | V1.2 |
-| California AB 2930 | N/A | Impact assessments | ~20 | V3.0 |
+| California AB 2930 | N/A | **Died in Senate Nov 2024 — not in force. Monitor for successor bill.** | — | N/A |
 | Colorado SB 205 | N/A | Consequential decisions | ~18 | V3.0 |

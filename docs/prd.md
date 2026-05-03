@@ -38,7 +38,7 @@ Small companies building or deploying AI systems in high-risk industries — hir
 **US hiring AI laws are already in effect:**
 - **NYC Local Law 144** — mandatory annual bias audit for hiring AI, in effect since July 2023. Companies hiring in New York City are likely already non-compliant today.
 - **Illinois AI Video Interview Act** — disclosure and consent required since 2020.
-- **California AB 2930** — effective January 2026.
+- **California AB 2930** — died in the Senate, November 2024. Not in force. Monitor for a successor bill in the 2025–26 session.
 - **Colorado SB 205** — effective February 2026.
 
 Most affected companies share the same problems:
@@ -269,7 +269,6 @@ These are not feature requirements. They are non-negotiable constraints that def
 | Feb 2025 | Article 5 prohibited AI — already in force |
 | July 2023 | NYC Local Law 144 — already in force |
 | Aug 2025 | GPAI model obligations |
-| Jan 2026 | California AB 2930 |
 | Feb 2026 | Colorado SB 205 |
 | Aug 2026 | Full High Risk AI obligations (Articles 9–49) |
 | Aug 2027 | Grace period ends for systems already on market |
@@ -380,7 +379,7 @@ Intake must ask clarifying questions to distinguish these before routing to the 
 | Illinois AI Video Interview Act | US-IL | | ✓ | | |
 | Maryland HB 1056 | US-MD | | | ✓ | |
 | EEOC AI guidance (Title VII) | US Federal | | | ✓ | |
-| California AB 2930 | US-CA | | | | ✓ |
+| California AB 2930 | US-CA | **Died Nov 2024** | | | monitor |
 | Colorado SB 205 | US-CO | | | | ✓ |
 | EU AI Act — education, finance | EU | | | ✓ | |
 | EU AI Act — all 8 categories | EU | | | | ✓ |
@@ -767,7 +766,7 @@ ALTER TABLE intakes
 │  Claude ingests PDFs → typed, certainty-tagged, versioned rules  │
 │  + prohibited_uses table (Article 5)                             │
 │  SHA-256 change detection · Human review gate · Git-tracked JSON │
-│  EU AI Act · NYC LL144 · IL AIVA · CA AB 2930 · CO SB 205        │
+│  EU AI Act · NYC LL144 · IL AIVA · CO SB 205                     │
 └────────────────────────────┬─────────────────────────────────────┘
                              │
 ┌────────────────────────────▼─────────────────────────────────────┐
@@ -861,7 +860,7 @@ Infrastructure:
 | **V2.0** | Compliance workspace (live tracking, mark complete, rescore), stale alerts, shareable link | Retention mechanic — users return | Ongoing monitoring |
 | **V2.1** | Evidence upload + Claude coverage check, "Evidence submitted" report tier | Report gains credibility beyond self-declaration | Self-reporting (full solution) |
 | **V2.2** | Follow-up Q&A with RAG (Pinecone), GDPR interaction Q&A | Reduces bounce to legal counsel | GDPR gap (partial) |
-| **V3.0** | CA AB 2930, CO SB 205, EEOC guidance, EU AI Act categories 2–3 | Full US hiring coverage before 2026 deadlines | US law completeness |
+| **V3.0** | CO SB 205, EEOC guidance, EU AI Act categories 2–3; monitor CA for successor to AB 2930 (died Nov 2024) | Full US hiring coverage | US law completeness |
 | **V3.1** | All 8 EU AI Act categories | Full EU coverage | Category completeness |
 | **V4.0** | Vendor compliance directory, evidence verification, API access, team collaboration | Platform play | Vendor due diligence at scale |
 

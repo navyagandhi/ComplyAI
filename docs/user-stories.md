@@ -1,286 +1,285 @@
 # ComplyAI — User Stories
-## Framework: EU AI Act — All 8 High Risk Categories (Annex III)
-## Approach: AI-first — Claude ingests, reasons, streams, explains
+## Framework: EU AI Act + US Hiring AI Laws
+## Approach: AI-first — Claude ingests, classifies, checks prohibited AI, reasons, streams, explains
+
+**Last updated:** 2 May 2026  
+**Reference:** [PRD v2.0](prd.md)
 
 ---
 
-## Personas across all categories
+## Personas
 
-| Persona | Role | Category |
-|---|---|---|
-| Sarah | Head of Product, HR tech startup | Employment & hiring |
-| Marcus | CTO, EdTech platform | Education & training |
-| Priya | Head of Compliance, fintech lender | Essential services |
-| Daniel | Head of Product, identity verification startup | Biometric identification |
-| Elena | Head of Engineering, energy management AI | Critical infrastructure |
-| James | CTO, GovTech predictive analytics | Law enforcement |
-| Fatima | Head of Legal, immigration tech company | Migration & border control |
-| Tom | Head of Product, LegalTech startup | Justice & democracy |
+| Persona | Role | Company | Category |
+|---|---|---|---|
+| **Sarah** | Head of Product, HR tech startup | Built resume screening AI | Employment & hiring — provider |
+| **James** | VP Engineering, recruiting platform | Integrating HireVue into ATS | Employment & hiring — deployer |
+| **Priya** | Head of Compliance, fintech lender | Credit scoring AI | Essential services — provider |
+| **Marcus** | CTO, EdTech platform | Student scoring + admissions AI | Education & training — provider |
+| **Daniel** | Head of Product, identity verification startup | Facial recognition for KYC | Biometric identification — provider |
+| **Elena** | Head of Engineering, energy management AI | AI for grid load balancing | Critical infrastructure — provider |
+| **Tom** | Head of Product, LegalTech startup | AI sentencing recommendations | Justice & democracy — provider |
+| **Fatima** | Head of Legal, immigration tech | AI for visa assessment | Migration & border control — provider |
 
 ---
 
-## Epic 1 — System Classification (all categories)
+## Epic 1 — Scoping and prohibited AI check (all users)
 
-**US-01**
+**US-01**  
+As any user, I want ComplyAI to check whether my AI system falls under Article 5 prohibited AI practices before showing me any compliance checklist, so that I know immediately if I may be operating an illegal system.
+
+**US-02**  
+As any user, if my system is flagged as potentially prohibited, I want to see a clear stop signal with the specific Article 5 provision involved and a recommendation to consult legal counsel — not a compliance gap list — so that I do not spend time on compliance work for a system that may be banned.
+
+**US-03**  
+As any user, I want ComplyAI to determine whether any law applies to my AI system at all, so that I do not complete an assessment for a system that is out of scope.
+
+**US-04**  
+As any user whose system is out of scope for the EU AI Act but who hires in NYC or Illinois, I want ComplyAI to still check US hiring AI law applicability independently, so that I am not falsely told I have no compliance obligations.
+
+---
+
+## Epic 2 — System classification (all users)
+
+**US-05**  
 As any user, I want to describe my AI system in plain English and have ComplyAI determine which Annex III High Risk category it falls under, so that I do not need to read the EU AI Act to know if it applies to me.
 
-**US-02**
-As any user, I want to see the exact Annex III category and section that my system falls under, so that I can verify the classification with my legal team.
+**US-06**  
+As any user, I want to see the exact Annex III category, my role (provider / deployer / both / substantially-modified / white-labelled), and which laws apply to me — before the intake form begins.
 
-**US-03**
-As any user, I want to know my compliance deadline, so that I understand how much time I have before full compliance is required.
+**US-07**  
+As any user, I want to know which laws are already in force for me today (vs. future deadlines), so that I understand if I am already non-compliant before I even complete the assessment.
 
-**US-04**
-As any user, I want to know if my system qualifies for the Article 6(3) exemption (limited purpose systems), so that I do not over-invest in compliance for a system that is not in scope.
+**US-08**  
+As any user, I want to challenge and edit the classification result before proceeding, so that I can correct it if the AI misclassified my system.
 
-**US-05**
-As any user, I want the risk classification explained in plain English, so that I can share it with stakeholders who have not read the regulation.
+**US-09**  
+As James (deployer), I want ComplyAI to ask clarifying questions when my role is ambiguous — specifically whether I fine-tuned the model or market it under my own brand — so that I am correctly classified as a provider or deployer and given the right obligation set.
 
----
-
-## Epic 2 — Intake Form (multi-category)
-
-**US-06**
-As any user, I want to describe what my AI does in plain English and have Claude classify it, so that I do not need to know legal terminology to get started.
-
-**US-07**
-As any user, I want the intake questions to adapt based on my AI category, so that I am only asked questions relevant to my specific system and obligations.
-
-**US-08**
-As any user, I want to indicate whether I am a provider, deployer, or both, so that the compliance check reflects the correct set of obligations for my role.
-
-**US-09**
-As any user, I want to select all jurisdictions I operate in, so that the gap analysis covers every law that applies to me.
-
-**US-10**
-As any user, I want to answer "not sure" to any question, so that uncertainty is captured as a gap rather than forcing me to guess and get a false clean result.
-
-**US-11**
-As a returning user, I want to update individual answers without restarting the form, so that I can reflect fixes without losing my history.
+**US-10**  
+As any user, I want the Article 6(3) exemption to be assessed automatically, so that I know if I qualify for a reduced compliance burden.
 
 ---
 
-## Epic 3 — Category 1: Employment & Hiring
+## Epic 3 — Intake form (all users)
 
-**Persona:** Sarah — Head of Product, HR tech startup building resume screening AI
+**US-11**  
+As any user, I want intake questions generated specifically for my category × role × jurisdiction, so that I am not asked about obligations that do not apply to me.
 
-**US-12**
+**US-12**  
+As any user, I want to answer "not sure" to any question and receive 1–2 guided follow-up questions rather than an automatic gap flag, so that I get credit for partial compliance rather than being penalised for uncertainty.
+
+**US-13**  
+As James (deployer), I want to be asked specifically about my vendor contract — whether it specifies the AI provider's compliance obligations — so that deployer-specific gaps are surfaced that a provider intake would never catch.
+
+**US-14**  
+As a returning user, I want to update individual intake answers without restarting the form, so that I can reflect fixes I have made without losing my assessment history.
+
+**US-15**  
+As any user, I want intake answers versioned — old answers retained when updated — so that historical reports accurately reflect the answers given at the time of each assessment.
+
+---
+
+## Epic 4 — Gap analysis (all users)
+
+**US-16**  
+As any user, I want my compliance gaps streamed to the dashboard in real time as Claude identifies them, so that I see the AI working rather than waiting for a result.
+
+**US-17**  
+As any user, I want current violations — gaps where the law is already in force — to stream first and render with a "Current violation" badge, so that I know immediately what I am already liable for today.
+
+**US-18**  
+As any user, I want each gap to show: severity (CRITICAL / HIGH / MEDIUM), requirement type badge (DOCUMENT / TEST / PROCESS / DISCLOSURE / REGISTRATION / CONTRACT), the exact article and sub-clause, a plain English explanation, what evidence I need to produce, and a concrete fix.
+
+**US-19**  
+As any user, I want to see which gaps are provider obligations and which are deployer obligations, so that I know which gaps my team owns versus which I need to demand from my AI vendor.
+
+**US-20**  
+As any user, I want "not sure" answers to generate partial gaps with specific guidance on what evidence would resolve the partial state, rather than treating them as full gaps.
+
+**US-21**  
+As a deployer (James), I want a vendor contract gap section that checks Article 25 required contract terms, even when I said I have a vendor contract, so that I know whether the contract actually covers what it needs to.
+
+**US-22**  
+As an EU company, I want a GDPR interaction note in my assessment telling me that AI hiring systems also trigger GDPR Article 22, so that I know to consult my DPO separately — this is a cross-reference, not a compliance gap.
+
+**US-23**  
+As an SME (under 250 employees), I want a note about eligibility for EU regulatory sandboxes under Articles 57–63, so that I know about a potential compliance pathway.
+
+---
+
+## Epic 5 — Confidence score (all users)
+
+**US-24**  
+As any user, I want a compliance score shown per law and as a combined score — never as a single number without the per-law breakdown — so that a strong EU AI Act score does not hide a critical NYC LL144 current violation.
+
+**US-25**  
+As any user, I want the score to apply certainty discounting — gaps awaiting regulatory guidance carry reduced weight — so that I am not unfairly penalised for ambiguities in the law itself.
+
+**US-26**  
+As any user, I want the score to update in real time as gaps stream to the dashboard, so that I see my compliance position improving as each gap is identified and I understand the order of priority.
+
+**US-27**  
+As any user, I want score thresholds clearly labelled as "ComplyAI benchmarks, not legal certification," so that I know what the score means and what it does not.
+
+---
+
+## Epic 6 — Category 1: Employment & Hiring (Sarah — provider, James — deployer)
+
+**US-28**  
 As Sarah, I want to know if my resume screening tool is classified as High Risk under Annex III Section 4(a), so that I know whether full compliance obligations apply before I sign an EU contract.
 
-**US-13**
-As Sarah, I want to see whether the Article 6(3) exemption applies to my tool, so that I know if I need a conformity assessment or can self-declare.
+**US-29**  
+As Sarah, I want to know my bias audit obligations under Article 10(2)(f) and NYC LL144, so that I can commission the right type of audit before EU market placement.
 
-**US-14**
-As Sarah, I want to know my bias audit obligations under Article 10(2)(f), so that I can commission the right type of audit before EU market placement.
+**US-30**  
+As Sarah, I want to know that NYC LL144 has been in force since July 2023 and that I may already be non-compliant, so that I treat this as a current violation, not a future task.
 
-**US-15**
+**US-31**  
 As Sarah, I want to know what candidate disclosure is required under Article 26(11), so that I can update the application flow before we go live in the EU.
 
-**US-16**
+**US-32**  
 As Sarah, I want a PDF I can send to my EU enterprise customer as a compliance evidence pack, so that the deal does not stall on a compliance question.
 
-**US-17**
-As Sarah's CTO, I want each gap to include a concrete technical fix, so that I can estimate effort and add it to the sprint backlog immediately.
+**US-33**  
+As Sarah's CTO, I want each gap to include a concrete technical fix and the requirement type (document vs test vs process), so that I can estimate effort and add it to the sprint backlog immediately.
+
+**US-34**  
+As James (deployer, using HireVue), I want to know which compliance obligations fall on me as a deployer versus on HireVue as the provider, so that I know what I need to demand from my vendor versus what I need to do myself.
+
+**US-35**  
+As James, I want the vendor contract gap section to tell me which Article 25 provisions my HireVue contract must include, so that I can review the contract and request amendments.
 
 ---
 
-## Epic 4 — Category 2: Education & Training
+## Epic 7 — Category 2: Education & Training (Marcus — provider)
 
-**Persona:** Marcus — CTO, EdTech platform that automatically scores student assignments and ranks applicants for university admissions
+**US-36**  
+As Marcus, I want to know if my student scoring AI is classified as High Risk under Annex III Section 3, so that I understand whether EU AI Act obligations apply.
 
-**US-18**
-As Marcus, I want to know if my student scoring AI is classified as High Risk under Annex III Section 3, so that I understand whether EU AI Act obligations apply to our product.
+**US-37**  
+As Marcus, I want to know what transparency obligations apply when AI is used to assess students, so that I can update our product to inform students and institutions correctly before EU deployment.
 
-**US-19**
-As Marcus, I want to know what transparency obligations apply when AI is used to assess students, so that I can update our product to inform students and institutions correctly.
-
-**US-20**
-As Marcus, I want to know whether our admissions ranking AI requires a conformity assessment before deployment in EU institutions, so that we do not place the product on the EU market before we are legally allowed to.
-
-**US-21**
-As Marcus, I want to know what human oversight mechanisms are required for AI-generated student scores, so that educators can override or review AI decisions as required by Article 14.
-
-**US-22**
-As a Head of Legal at a university deploying the tool, I want to know my obligations as a deployer under Article 26, so that I understand what we need to demand from our EdTech vendor.
+**US-38**  
+As a university Head of Legal deploying Marcus's tool, I want to know my obligations as a deployer under Article 26, so that I understand what I need to demand from the EdTech vendor.
 
 ---
 
-## Epic 5 — Category 3: Essential Services (Finance & Insurance)
+## Epic 8 — Category 3: Essential Services (Priya — provider)
 
-**Persona:** Priya — Head of Compliance at a fintech company using AI to assess creditworthiness and approve loans
-
-**US-23**
+**US-39**  
 As Priya, I want to know if our credit scoring AI is classified as High Risk under Annex III Section 5(b), so that I can brief the board on our EU AI Act exposure before our next regulatory review.
 
-**US-24**
-As Priya, I want to know what documentation we need to produce for our credit scoring model under Article 11, so that we can instruct our data science team on what to capture.
+**US-40**  
+As Priya, I want to know what documentation we need under Article 11 and Annex IV for our credit scoring model, so that I can instruct our data science team on what to capture.
 
-**US-25**
-As Priya, I want to know what the bias testing requirements are for financial AI under Article 10, so that we can determine whether our existing model validation process is sufficient.
+**US-41**  
+As Priya, I want to know whether customers refused credit by our AI must be informed that AI was used, so that I can update our decision notification letters.
 
-**US-26**
-As Priya, I want to know whether customers who are refused credit by our AI must be informed that AI was used, so that we can update our decision notification letters.
-
-**US-27**
-As Priya, I want to know what logging we need to retain and for how long under Article 12, so that we can scope the infrastructure requirement for our engineering team.
-
-**US-28**
-As Priya, I want a compliance report I can present to our financial regulator alongside our existing regulatory submissions, so that we have a single document covering our EU AI Act status.
+**US-42**  
+As Priya, I want a compliance report I can present to our financial regulator alongside existing submissions, covering our EU AI Act status with exact article citations.
 
 ---
 
-## Epic 6 — Category 4: Biometric Identification
+## Epic 9 — Law versioning and stale alerts (all users)
 
-**Persona:** Daniel — Head of Product at an identity verification startup using facial recognition for KYC
+**US-43**  
+As any user, I want to see the exact law version my assessment was conducted against (e.g. "EU AI Act v2024.08.01"), so that I and my legal team can verify the assessment is current.
 
-**US-29**
-As Daniel, I want to know if our facial recognition system is classified as High Risk or prohibited under the EU AI Act, so that I understand whether we can legally operate in the EU at all.
+**US-44**  
+As any user, I want to receive a stale alert when a law I was assessed against has been updated, with a plain English summary of what changed, so that I know to re-run my assessment.
 
-**US-30**
-As Daniel, I want to know the difference between the prohibited biometric use cases (Article 5) and the permitted High Risk ones (Annex III Section 1), so that I can confirm our specific use case is on the right side of the line.
+**US-45**  
+As any user, I want historical reports to remain accessible and permanently reference the law version they were assessed against, so that I can show an auditor my compliance history over time.
 
-**US-31**
-As Daniel, I want to know what accuracy and robustness requirements apply to biometric AI under Article 15, so that I can define the performance benchmarks our model must meet.
-
-**US-32**
-As Daniel, I want to know what registration obligations apply before we can deploy in the EU, so that we complete the EU database registration under Article 49 on time.
+**US-46**  
+As any user, I want a law version status panel in the workspace showing whether each law I was assessed against is current or has been superseded, so that I always know the freshness of my compliance status.
 
 ---
 
-## Epic 7 — Category 5: Critical Infrastructure
+## Epic 10 — Compliance workspace (V2.0)
 
-**Persona:** Elena — Head of Engineering at a company whose AI manages energy grid load balancing
+**US-47**  
+As any user, I want a compliance workspace showing: per-law confidence scores, required actions checklist (typed and sorted by deadline), law version status, and current violation badges — all in one view.
 
-**US-33**
-As Elena, I want to know if our energy management AI is classified as High Risk under Annex III Section 2, so that I understand our compliance obligations before we expand into EU markets.
+**US-48**  
+As any user, I want to mark a required action as "in progress" or "completed (self-declared)" in the workspace, with the date and user displayed, so that I can track my remediation progress.
 
-**US-34**
-As Elena, I want to know what cybersecurity and robustness requirements apply to critical infrastructure AI under Article 15, so that we can assess whether our existing security controls are sufficient.
+**US-49**  
+As any user, I want completed actions to display "Self-declared by [company] on [date]. Evidence not verified by ComplyAI." so that I and my legal team have no false impression that ComplyAI has verified the evidence.
 
-**US-35**
-As Elena, I want to know what human oversight requirements apply when our AI is making real-time decisions about infrastructure, so that we can design the correct intervention mechanisms.
+**US-50**  
+As any user, I want to share a read-only workspace link with my CTO or Head of Legal, so that they can review the compliance status without me having to export and email a document.
 
----
-
-## Epic 8 — Category 6: Law Enforcement
-
-**Persona:** James — CTO at a GovTech company building a predictive risk scoring tool for public sector clients
-
-**US-36**
-As James, I want to know whether our predictive risk scoring tool is classified as High Risk or prohibited under the EU AI Act, so that I understand whether we can legally sell to EU law enforcement agencies.
-
-**US-37**
-As James, I want to know what fundamental rights impact assessment is required before our tool can be used by law enforcement, so that we can scope the assessment and commission it before any EU deployment.
-
-**US-38**
-As James, I want to know what logging and audit trail requirements apply to law enforcement AI under Articles 12 and 26, so that we can design the data retention infrastructure correctly.
+**US-51**  
+As any user, I want a full audit history — every past assessment with date, scores, law versions, and gap count — so that I can demonstrate to a regulator that I have been actively improving.
 
 ---
 
-## Epic 9 — Category 7: Migration & Border Control
+## Epic 11 — Audit report PDF (all users)
 
-**Persona:** Fatima — Head of Legal at a company building AI to assist with visa and asylum application assessment
+**US-52**  
+As any user, I want to download a professionally formatted 9-section PDF audit report, so that I have a credible document to share with customers, regulators, or investors.
 
-**US-39**
-As Fatima, I want to know if our visa assessment AI is classified as High Risk under Annex III Section 7, so that I can advise the board on our legal position before we pitch to EU government clients.
+**US-53**  
+As any user, I want the PDF to open with a current violations section (laws already in force) before future deadlines, so that recipients immediately see what is already a live legal issue.
 
-**US-40**
-As Fatima, I want to know what transparency obligations apply when AI is used in asylum and immigration decisions, so that I can ensure our product meets the requirements before any government deployment.
+**US-54**  
+As any user, I want every resolved gap in the PDF to carry "Self-declared by [company] on [date]. Evidence not verified by ComplyAI." so that the report is honest about what it does and does not confirm.
 
-**US-41**
-As Fatima, I want to know what human oversight is required for AI-assisted immigration decisions under Article 14, so that we can design a compliant review workflow for our government clients.
+**US-55**  
+As any user, I want the PDF to show the exact law versions used on the cover page, so that I know what version my compliance was assessed against.
 
----
-
-## Epic 10 — Category 8: Justice & Democracy
-
-**Persona:** Tom — Head of Product at a LegalTech startup building AI to assist judges with sentencing recommendations
-
-**US-42**
-As Tom, I want to know if our sentencing recommendation AI is classified as High Risk under Annex III Section 8, so that I understand the full compliance obligations before we approach any EU court system.
-
-**US-43**
-As Tom, I want to know what human oversight mechanisms are required when AI assists with judicial decisions, so that we can design a system where the judge retains full authority.
-
-**US-44**
-As Tom, I want to know what transparency obligations apply to AI used in court proceedings, so that defendants and their counsel can be informed that AI was used in any recommendation.
-
----
-
-## Epic 11 — Gap Analysis (all categories)
-
-**US-45**
-As any user, I want to see my compliance gaps streamed to the dashboard in real time as Claude identifies them, so that I see the AI working rather than waiting for a result.
-
-**US-46**
-As any user, I want each gap to show severity (CRITICAL / HIGH / MEDIUM), the exact article and sub-clause, a plain English explanation, and a concrete fix, so that I can immediately understand and act on each one.
-
-**US-47**
-As any user, I want gaps grouped by severity so that I focus on CRITICAL items first.
-
-**US-48**
-As any user, I want to see which gaps relate to my provider obligations and which relate to my deployer obligations, so that I know which gaps my team owns versus which I need to demand from my vendor.
-
-**US-49**
-As any user, I want to expand a gap card to see a detailed technical fix recommendation, so that I can hand it directly to my engineering team.
-
-**US-50**
-As any user, I want gaps to disappear from my dashboard when I update my intake answers to reflect a fix, so that my dashboard always shows my current compliance status.
-
----
-
-## Epic 12 — Audit Report PDF (all categories)
-
-**US-51**
-As any user, I want to download a professionally formatted PDF audit report specific to my AI category, so that I have a credible document to share with customers, regulators, or investors.
-
-**US-52**
-As any user, I want the PDF to include my company name, system description, risk classification, gap list with citations, and a prioritised fix list, so that it is a complete compliance record.
-
-**US-53**
-As any user, I want to regenerate the PDF after updating my intake, so that my report always reflects my current compliance status.
-
-**US-54**
+**US-56**  
 As a Head of Legal reviewing the PDF, I want every compliance claim to cite the exact article and sub-clause, so that I can independently verify it against the source regulation.
 
----
+**US-57**  
+As any user, I want the PDF disclaimer to be prominent — not buried in a footer — covering: not legal advice, AI-extracted rules, self-declaration only, consult counsel.
 
-## Epic 13 — Progress Tracking & History (all categories)
+**US-58**  
+As an EU company, I want the PDF to include a GDPR interaction note covering AI hiring system obligations under GDPR Article 22, so that my DPO knows what to review separately.
 
-**US-55**
-As any user, I want a compliance score that improves as I resolve gaps, so that I have a metric to report in board updates and investor conversations.
-
-**US-56**
-As any user, I want to see a history of my compliance reports with dates, so that I can demonstrate to an auditor or regulator that I have been actively improving.
-
-**US-57**
-As any user, I want to share a dashboard link with my CTO or Head of Legal, so that they can review the gap analysis without me having to export and email a document.
+**US-59**  
+As any deployer, I want a vendor contract gap section in the PDF, so that I can immediately see which Article 25 provisions my vendor contract needs to include.
 
 ---
 
-## Epic 14 — Follow-up Q&A with RAG (V2, all categories)
+## Epic 12 — Evidence upload (V2.1)
 
-**US-58**
+**US-60**  
+As any user, I want to attach a file to a gap in the workspace and have Claude assess whether it satisfies the specific requirements for that gap, so that my report can reflect "Evidence submitted" rather than just "Self-declared."
+
+**US-61**  
+As any user, I want Claude's evidence assessment to return a structured result: which Annex IV sub-items are covered, which are not, and what specific gaps remain in the evidence — not just "pass" or "fail."
+
+---
+
+## Epic 13 — Follow-up Q&A with RAG (V2.2)
+
+**US-62**  
 As any user, I want to ask free-text follow-up questions after seeing my gaps, so that I can get specific answers grounded in the regulation without hiring a lawyer.
 
-**US-59**
-As any user, I want follow-up answers to cite the exact article they are based on, so that I can trust the answer and verify it if needed.
+**US-63**  
+As any user, I want follow-up answers to cite the exact article they are based on, so that I can trust the answer and verify it independently.
 
-**US-60**
-As any user, I want to ask cross-jurisdiction questions like "does NYC LL144 require the same bias audit as the EU AI Act?", so that I understand where obligations overlap and where they differ.
+**US-64**  
+As any user, I want to ask cross-jurisdiction questions like "does NYC LL144 require the same bias audit as the EU AI Act Article 10?", so that I understand where obligations overlap and where they differ.
 
 ---
 
 ## Compliance coverage by category
 
-| Category | Annex III | Key articles | Approx rules |
-|---|---|---|---|
-| Employment & hiring | Section 4(a) | 4, 9, 10, 11, 12, 13, 14, 26, 27, 43, 48 | ~88 |
-| Education & training | Section 3 | 9, 10, 11, 12, 13, 14, 26, 43 | ~70 |
-| Essential services | Section 5 | 9, 10, 11, 12, 13, 14, 26, 27, 43 | ~80 |
-| Biometric identification | Section 1 | 5, 9, 10, 11, 12, 13, 14, 15, 43, 49 | ~75 |
-| Critical infrastructure | Section 2 | 9, 11, 12, 14, 15, 43 | ~55 |
-| Law enforcement | Section 6 | 5, 9, 10, 11, 12, 14, 27, 43 | ~65 |
-| Migration & border | Section 7 | 9, 10, 11, 12, 14, 26, 27, 43 | ~60 |
-| Justice & democracy | Section 8 | 9, 11, 12, 14, 26, 43 | ~50 |
-| **Total** | | | **~543 rules** |
+| Category | Annex III | Key articles | Approx rules | Status |
+|---|---|---|---|---|
+| Employment & hiring | Section 4(a) | 4, 9, 10, 11, 12, 13, 14, 26, 27, 43, 48 | ~88 | MVP |
+| Education & training | Section 3 | 9, 10, 11, 12, 13, 14, 26, 43 | ~70 | V1.1 |
+| Essential services | Section 5 | 9, 10, 11, 12, 13, 14, 26, 27, 43 | ~80 | V1.2 |
+| Biometric identification | Section 1 | 5, 9, 10, 11, 12, 13, 14, 15, 43, 49 | ~75 | V2 |
+| Critical infrastructure | Section 2 | 9, 11, 12, 14, 15, 43 | ~55 | V2 |
+| Law enforcement | Section 6 | 5, 9, 10, 11, 12, 14, 27, 43 | ~65 | V3.1 |
+| Migration & border | Section 7 | 9, 10, 11, 12, 14, 26, 27, 43 | ~60 | V3.1 |
+| Justice & democracy | Section 8 | 9, 11, 12, 14, 26, 43 | ~50 | V3.1 |
+| **Total EU AI Act** | | | **~543** | |
+| NYC Local Law 144 | N/A | Bias audit + disclosure | ~15 | V1.2 |
+| Illinois AI Video Act | N/A | Disclosure + consent | ~8 | V1.2 |
+| California AB 2930 | N/A | Impact assessments | ~20 | V3.0 |
+| Colorado SB 205 | N/A | Consequential decisions | ~18 | V3.0 |

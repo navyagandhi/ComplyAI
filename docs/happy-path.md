@@ -1,5 +1,10 @@
 # ComplyAI — Happy Path
 
+**Last updated:** 2 May 2026  
+**Reference:** [PRD v2.0](prd.md)
+
+---
+
 ## The happy path user
 
 **Who:** Sarah, Head of Product at a 40-person HR tech startup. Her company built a resume screening and candidate ranking tool. They have just started selling into EU customers and someone on a sales call asked "are you EU AI Act compliant?" She did not know the answer. She found ComplyAI through a Google search.
@@ -10,127 +15,168 @@
 
 ### Step 1 — Landing and sign up
 
-Sarah lands on the ComplyAI homepage. The headline reads something like: "Find out exactly what your hiring AI needs to fix to comply with the EU AI Act." She clicks Get Started. She creates an account with her work email. No credit card. No sales call required.
+Sarah lands on the ComplyAI homepage. She clicks Get Started. She creates an account with her work email. No credit card. No sales call required.
 
-**What makes this work:** She can start immediately. No demo request, no "talk to sales", no waiting. The moment she signs up she is inside the product.
+The moment she signs up she is inside the product.
 
 ---
 
-### Step 2 — Intake — 5 questions, 3 minutes
+### Step 2 — Describe your AI system (free text)
 
-She lands on a clean intake form. It tells her it will take 3 minutes. It asks her five things:
+She types: "We use an ML model to screen and rank job candidates for engineering roles."
 
-**Question 1 — What does your AI do?**
-She selects: "Screen and rank job candidates"
+ComplyAI shows her the classification result within 2 seconds.
 
-**Question 2 — Did you build it or buy it?**
-She selects: "We built it"
+---
 
-**Question 3 — Where do you operate?**
-She selects: EU, United Kingdom, United States — New York
+### Step 3 — Prohibited AI check (automatic, before anything else)
 
-**Question 4 — Does your AI score or rank candidates automatically?**
-She selects: Yes
+Before showing any compliance checklist, ComplyAI checks whether her system falls under Article 5 — EU AI Act prohibited AI practices.
 
-**Question 5 — Have you done any of the following?** (checklist)
-- Conducted a bias audit — No
-- Written technical documentation — No
-- Set up human override mechanism — Not sure
-- Informed candidates AI is used — No
-- Trained staff on AI literacy — No
+Her resume screening tool is not prohibited. Classification proceeds.
+
+*(If she had described an emotion recognition system for hiring decisions, she would see a stop-sign UI: "Your system may fall under EU AI Act Article 5 — Prohibited AI Practices. Operating this system in the EU may be unlawful. Consult qualified legal counsel before proceeding." No gap list. No score.)*
+
+---
+
+### Step 4 — Classification review
+
+She sees:
+
+> **Classification: HIGH-RISK**  
+> Annex III, Section 4(a) — Employment, workers' management and access to self-employment.  
+> Because your system scores and ranks candidates, the Article 6(3) exemption does not apply.  
+>
+> **Your role: Provider** — you built and trained this system.  
+>
+> **Laws that apply to you:**
+> - EU AI Act (Articles 9–49) — deadline 2 August 2026
+> - NYC Local Law 144 — **already in force since July 2023** (if hiring in NYC)
+>
+> **Important:** NYC LL144 is already in force. If you hire in New York City, this is a current violation — not a future deadline.
+
+She confirms this is correct. (She can challenge and edit if the classification is wrong.)
+
+---
+
+### Step 5 — Intake form (9 questions, ~3 minutes)
+
+Questions are role-specific (provider) and jurisdiction-aware. No legal jargon.
+
+1. Describe what your AI does in the hiring process *(refines classification)*
+2. Do you have a documented risk management system? *(yes / no / not sure)*
+3. Do you have written technical documentation covering training data, design choices, and performance metrics? *(yes / no / not sure)*
+4. Can you show you examined your training data for biases? *(yes / no / not sure)*
+5. Is there a mechanism for a human to review, override, or reject the AI's output before a hiring decision is made? *(yes / no / not sure)*
+6. Do you provide customers with documentation explaining how to use the system and its limitations? *(yes / no / not sure)*
+7. Have you conducted or commissioned a conformity assessment? *(yes / no / not sure)*
+8. Is this system registered in the EU AI Act public database? *(yes / no / not yet in market)*
+9. In which countries and US states do you currently sell or deploy this system? *(multi-select)*
+
+She answers "Not sure" to the human override mechanism question. A follow-up appears:
+> "Has anyone on your team been assigned the authority to reject the AI's recommendation for a specific candidate?" (Yes / No)  
+> "Is there a UI control for this?" (Yes / No)
+
+Both no → CRITICAL gap flagged with partial: false.
 
 She hits Submit.
 
-**What makes this work:** Five questions. No legal jargon. No ambiguity. She does not need to know what "Annex III" means to answer these. The questions map directly to check fields in the rules engine but she never sees that layer.
-
 ---
 
-### Step 3 — Risk classification — instant
+### Step 6 — Gap analysis dashboard (streaming, real-time)
 
-The screen shows her result within 2 seconds:
+Gaps appear one by one as Claude identifies them. Current violations appear first.
 
-> **Your system is classified as HIGH-RISK under the EU AI Act.**
-> Annex III, Section 4(a) — Employment, workers' management and access to self-employment.
-> Because your system scores and ranks candidates, the Article 6(3) exemption does not apply.
-> Full compliance required by 2 August 2026.
+**⚠ CURRENT VIOLATIONS — act now**
 
-A single clear badge. One paragraph of plain English. One deadline.
+🔴 **Annual bias audit not conducted**  
+`[TEST]` NYC Local Law 144 — required since July 2023  
+*This is not a future deadline. You are currently non-compliant.*  
+Fix: Commission an independent bias audit examining hiring outcomes across race, sex, and ethnicity. Publish the results. Must be conducted annually by an independent auditor.
 
-**What makes this work:** She now knows for certain whether this applies to her. This alone is worth the 3 minutes. Most founders in her position genuinely do not know if they are in scope. The moment she sees "HIGH-RISK" confirmed with a citation she understands the stakes.
+🔴 **Candidates not notified that AI is used**  
+`[DISCLOSURE]` NYC Local Law 144 + EU AI Act Article 26(11)  
+Fix: Add a disclosure before the screening process begins. Must be visible before any assessment takes place.
 
----
+**BY 2 AUGUST 2026 — EU AI Act**
 
-### Step 4 — Gap analysis dashboard
+🔴 **No human override mechanism**  
+`[PROCESS]` Article 14(4)(d)  
+Fix: Assign a named role with explicit authority to override any AI recommendation. Build a UI control that logs every override decision.
 
-Below the classification she sees her compliance gaps ranked by severity. It looks like a list — not a legal document, not a spreadsheet.
-
-**CRITICAL — 6 gaps**
-
-🔴 **No bias audit conducted**
-Cited: EU AI Act Article 10(2)(f) + NYC Local Law 144
-Fix: Conduct an independent bias audit examining outcomes across race, sex, age, and ethnicity.
-
-🔴 **Candidates not informed AI is used**
-Cited: EU AI Act Article 26(11) + Illinois AI Video Act
-Fix: Add a clear disclosure before the screening process begins. Must be visible — not buried in terms of service.
-
-🔴 **No human override mechanism**
-Cited: EU AI Act Article 14(4)(d)
-Fix: A designated person must be able to disregard or reverse any AI output for any candidate.
-
-🔴 **No technical documentation**
-Cited: EU AI Act Article 11(1) + Annex IV
+🔴 **No technical documentation**  
+`[DOCUMENT]` Article 11(1) + Annex IV  
 Fix: Document your system's intended purpose, training data, design choices, and performance metrics before market placement.
 
-🔴 **No AI literacy training for staff**
-Cited: EU AI Act Article 4 — Active since February 2025
-Fix: Staff who operate or oversee the AI must receive training on its capabilities and limitations. This is already overdue.
+🔴 **No risk management system**  
+`[DOCUMENT]` Article 9(1)  
+Fix: Create a risk register. Document known risks and mitigation measures. Assign an owner. Schedule periodic reviews.
 
-🔴 **No record keeping / logging infrastructure**
-Cited: EU AI Act Article 12(1) + Article 26(6)
-Fix: Your system must automatically generate logs. You must retain them for at least 6 months (EU) or 4 years (California).
+🔴 **No AI literacy training for staff**  
+`[PROCESS]` Article 4 — in force February 2025  
+*Staff who operate or oversee this AI must have received training on its capabilities and limitations. This is already overdue.*
 
-**HIGH — 8 gaps** (collapsed, expandable)
+🔴 **No logging infrastructure**  
+`[PROCESS]` Article 12(1)  
+Fix: Your system must automatically generate logs. Retain them for at least 6 months (EU) or 4 years (California).
 
-**What makes this work:** Every gap has three things — what is wrong, exactly which law says so, and what to do about it. Sarah does not need a lawyer to understand this list. She can share it with her CTO in a Slack message and he will know immediately what to build.
+**HIGH — 5 gaps** *(collapsed, expandable)*
 
----
+Below the gap list:
 
-### Step 5 — Download the audit report
-
-At the bottom of the dashboard there is one button:
-
-**Download Audit Report (PDF)**
-
-The PDF contains:
-- Her company name and system description
-- Risk classification with legal citation
-- Full gap list with severity ratings
-- Each gap cited to the specific article and sub-clause
-- A prioritised fix list — what to do first
-- A compliance deadline summary by jurisdiction
-
-**What makes this work:** This is the artifact she brings to her board, her investors, her legal counsel, or her EU customer who asked the question on the sales call. It looks professional. It has citations. It was generated in under 5 minutes. Without ComplyAI this document would cost her £3,000–£8,000 from a law firm and take 3 weeks.
+```
+┌─ COMPLIANCE STATUS ─────────────────────────────────────────────┐
+│  EU AI Act:          22/100  ● 5 CRITICAL · 5 HIGH · 2 MEDIUM  │
+│  NYC Local Law 144:   0/100  ● 2 CRITICAL                       │
+│  Overall:            14/100                                     │
+│  ⚠ 4 gaps are current violations (laws already in force)       │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-### Step 6 — She shares it and comes back
+### Step 7 — Download the audit report (PDF)
 
-She downloads the PDF, sends it to her CTO with the message "here's what we need to fix before we can sell in the EU." She shares the dashboard link with her Head of Legal.
+The PDF is a 9-section document:
 
-Two weeks later she comes back, updates two answers in the intake — "bias audit: Yes" and "candidates informed: Yes" — and regenerates the report. The two critical gaps disappear. Her compliance score goes up. She downloads the updated PDF.
+1. **Cover page** — company name, AI system, assessment date, exact law versions used
+2. **Compliance status** — per-law scores + overall + role + classification basis
+3. **Current violations** — NYC LL144 and Article 4 gaps at the top, clearly labelled "These apply now"
+4. **Required actions by deadline** — typed badges, sorted by date
+5. **Gap detail** — per gap: article citation, plain English explanation, what to produce, deadline, owner
+6. **Passed requirements** — labelled "Self-declared by [company] on [date]. Evidence not verified by ComplyAI."
+7. **Vendor contract gaps** — N/A (Sarah is a provider, not a deployer)
+8. **GDPR interaction note** — "This assessment covers EU AI Act obligations only. AI hiring systems also trigger GDPR Article 22. Consult your DPO."
+9. **Disclaimer** — Full disclaimer block. Not legal advice. AI-extracted rules. Self-declaration only. Consult counsel.
 
-**What makes this work:** The product has a reason to come back to. It is not a one-time report — it is a living compliance tracker. Each time she fixes something and updates the intake, the report reflects her progress.
+She downloads the PDF, sends it to her CTO: "here's what we need to fix before we can sell in the EU."
+
+---
+
+### Step 8 — She comes back
+
+Two weeks later she comes back. She has conducted the bias audit. She updates her intake: "bias audit: Yes." She re-runs the assessment.
+
+The NYC LL144 bias audit gap disappears. Her NYC score goes from 0/100 to 45/100. The PDF now shows the bias audit gap as: "Self-declared by [company] on [date]. Evidence not verified by ComplyAI."
+
+She downloads the updated PDF and shares the link with her Head of Legal for sign-off.
+
+---
+
+### Step 9 — Stale alert (when law updates)
+
+Six months later, the EU Commission publishes updated guidance. A new version of the EU AI Act rules is ingested. A stale alert appears in her workspace:
+
+> "The EU AI Act rules your assessment used have been updated. 2 rules changed. Re-run your assessment to see if your compliance status is affected."
+
+She re-runs the assessment. The updated rules flag one new HIGH gap she had not seen before.
 
 ---
 
 ## What is explicitly OUT of scope for MVP
 
-To keep this clean — these are things that might come later but are not in the happy path:
-- Vendor due diligence checker (needs outbound workflow)
-- Slack / Jira integration
-- US state law deep-dives beyond NYC and Illinois
-- Multi-user team collaboration
-- Continuous automated monitoring
-- API access
-- White-label version
+- Evidence upload (V2.1) — she can self-declare resolution, but cannot attach a file for Claude to verify
+- Shareable workspace link (V2.0) — Head of Legal gets the PDF, not a live workspace view
+- Multi-user collaboration — V4.0
+- US state laws beyond NY intro in V1.2
+- Follow-up Q&A — V2.2

@@ -1,109 +1,143 @@
 # ComplyAI — Tech Stack
 
-## Product vision
-Universal EU AI Act compliance checker for all 8 High Risk AI categories defined in Annex III. ~543 rules extracted by Claude from the same 144-page document. Same architecture across every category — Claude ingests, reasons, streams, explains.
+**Last updated:** 2 May 2026  
+**Reference:** [PRD v2.0](prd.md) · [Technical Architecture](technical-architecture.md) · [System Design](system-design.md)
 
-## Architecture philosophy
-AI-first. Claude does the legal reasoning. Rules are not hardcoded — Claude reads raw legal documents and extracts structured obligations. Adding a new category or jurisdiction means feeding Claude a document, not engineering time.
+---
+
+## Product vision
+
+Compliance operating system for companies using AI in high-risk industries. Claude ingests raw legal documents, extracts structured versioned rules, classifies systems, checks for prohibited AI, reasons across rules, streams the gap analysis, and generates a cited audit report — with no hardcoded compliance logic.
 
 ---
 
 ## AI Layer
 
-### Claude API (Anthropic) — the core engine
-Five distinct jobs:
+### LLM provider abstraction (not hardcoded to any single model)
 
-| Job | What Claude does |
+All LLM calls route through `backend/ai/llmClient.js`. No business logic references a specific provider directly.
+
+| Task | Default model | Alternative (V1.1+) | Rationale |
+|---|---|---|---|
+| **Law ingestion** | claude-opus-4-7 | Gemini 1.5 Pro (V2) | Run rarely — pay for best extraction quality |
+| **Classification** | claude-haiku-4-5-20251001 | GPT-4o mini | Fast, cheap, straightforward task |
+| **Compliance reasoning** | claude-sonnet-4-6 | GPT-4o | Core product — pay for reasoning quality |
+| **PDF narrative** | claude-sonnet-4-6 | GPT-4o | Quality prose |
+| **Follow-up Q&A** | claude-haiku-4-5-20251001 | Cohere Command R+ | High frequency — optimise for cost |
+
+### Why Claude is the default
+
+| Reason | Detail |
 |---|---|
-| **Law ingestion** | Reads EU AI Act PDF, extracts ~543 rules across 8 categories as structured JSON |
-| **System classification** | Reads user's free-text description, determines Annex III category via `classify_system` tool |
-| **Compliance reasoning** | Reads intake answers + filtered rules, identifies gaps via `report_compliance_gaps` tool use |
-| **Streaming output** | Streams gap analysis to dashboard in real time — AI is visible, not hidden behind a spinner |
-| **Narrative generation** | Writes executive summary, gap explanations, and PDF narrative per user — no templates |
+| **Prompt caching** | ~88 rules JSON sent with every assessment. Claude caches repeated context — 60–70% cost reduction at volume. |
+| **200k context window** | Entire legal documents ingested in one call without chunking. |
+| **Tool use reliability** | Hallucination prevention depends on Claude reliably calling structured tools every time. |
+| **Legal reasoning quality** | Complex partial compliance states require nuanced judgment. |
 
-### Pinecone (vector database) — V2 only
-Used exclusively for follow-up Q&A after gap analysis. ~543 rules embedded per category. User asks free-text question → Pinecone retrieves relevant chunks → Claude answers with citations. Not used for primary compliance reasoning — SQL filtering handles that.
+### Pinecone (V2 only — follow-up Q&A)
+
+Used exclusively for follow-up Q&A after gap analysis. ~543 rules embedded per jurisdiction + category. User asks free-text question → Pinecone retrieves relevant rule chunks → Claude answers with citations. Not used for primary compliance reasoning — SQL filtering handles that.
 
 ---
 
 ## Frontend
+
 - **Next.js 14** — routing, API layer, SSR
 - **React 18** — component model
-- **Tailwind CSS** — styling with custom severity colours (CRITICAL/HIGH/MEDIUM)
+- **Tailwind CSS** — styling with severity colours (CRITICAL/HIGH/MEDIUM), current-violation red, requirement type badges
 - **Server-Sent Events** — Claude streams gap analysis to dashboard in real time
+- **useSSE hook** — reconnects on drop, supports cursor-based resumption
+
+Key pages:
+- `pages/index.js` — Landing, free-text AI description
+- `pages/intake.js` — Role-specific, jurisdiction-aware intake form
+- `pages/dashboard.js` — Streaming gap analysis
+- `pages/workspace/[id].js` — Compliance workspace (V2)
+- `pages/report/[id].js` — Shareable read-only report
+
+---
 
 ## Backend
+
 - **Node.js + Express** — compliance API
-- **PostgreSQL** — users, intakes, reports, AI-extracted rules (all 543, tagged by category)
+- **PostgreSQL** — full data layer (see schema below)
 - **Anthropic SDK** — Claude client with streaming and tool use
 - **PDFKit** — audit report generation, runs in-process
+- **AJV** — JSON schema validation for ingested rules
+- **pdf-parse** — PDF text extraction before Claude ingestion
+
+Key API routes:
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | /api/v1/classify | Classify system — Annex III + role + prohibited AI check |
+| POST | /api/v1/intake | Store intake answers |
+| POST | /api/v1/assess | Create assessment record, trigger Claude reasoning |
+| GET | /api/v1/stream/:id | SSE stream — gaps in real time |
+| GET | /api/v1/report/:id | Fetch report JSON |
+| GET | /api/v1/workspace/:systemId | Compliance workspace state |
+| GET | /api/v1/pdf/:id | Generate/download PDF |
+| POST | /api/v1/ingest | Admin — law ingestion (internal only) |
+
+---
+
+## Database (PostgreSQL)
+
+### Core tables
+
+| Table | Purpose |
+|---|---|
+| `users` | User accounts + company profile |
+| `ai_systems` | Each AI system registered (a company can have many) |
+| `law_versions` | Versioned laws — SHA-256 hash, status (draft/active/superseded) |
+| `law_version_diffs` | Diff between law versions (added/removed/modified rules) |
+| `prohibited_uses` | Article 5 prohibited AI use cases — separate from rules |
+| `rules` | All extracted compliance rules — versioned, certainty-tagged |
+| `intakes` | Intake form answers — versioned per submission |
+| `reports` | Generated compliance reports — linked to law_version_ids |
+| `stale_alerts` | Notifications when law update affects existing report |
+| `ingestion_logs` | Full log of every ingestion run |
+
+### Key rule fields
+
+Beyond the basic fields (`id`, `article`, `title`, `severity`, `applies_to`):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `requirement_type` | enum | document / test / process / disclosure / registration / contract |
+| `action_owner` | enum | provider / deployer / both |
+| `frequency` | enum | one_time / annual / ongoing / per_deployment |
+| `effective_date` | date | When this rule is enforceable |
+| `certainty` | enum | established / interpretive / pending_guidance / delegated_act / contested |
+| `certainty_note` | text | Claude's note on ambiguity |
+| `evidence_description` | text | What the user must produce |
+| `gdpr_interaction_note` | text | Cross-reference to GDPR (surfaced, not a gap) |
+| `law_version_id` | uuid | Which law version this rule belongs to |
+| `valid_until` | date | Null = active; set when rule is superseded |
+
+---
 
 ## Deployment
-- **Vercel** — Next.js frontend
-- **Railway or Render** — Node.js backend + PostgreSQL
-- **Pinecone** — managed vector DB (V2)
+
+| Layer | Service | Notes |
+|---|---|---|
+| **Frontend** | Vercel | Next.js hosting, edge CDN |
+| **Backend + DB** | Railway | Node.js + PostgreSQL 15 |
+| **Vector DB** | Pinecone | V2 only — follow-up Q&A |
+| **Local dev** | Docker Compose | PostgreSQL via docker-compose.yml |
 
 ---
 
 ## Scale
 
-| Stage | Rules | Categories | RAG needed |
-|---|---|---|---|
-| MVP | ~88 | 1 (Employment) | No — fits in context window |
-| V2 | ~238 | 3 (+ Education, Finance) | Yes — follow-up Q&A only |
-| V3 | ~543 | All 8 | Yes — full retrieval pipeline |
-| V3+ | 543+ | All 8 + US jurisdictions | Yes — cross-jurisdiction RAG |
+| Stage | Rules | Categories | Laws | RAG |
+|---|---|---|---|---|
+| MVP | ~88 | 1 (Employment) | EU AI Act | No — fits in context window |
+| V1.2 | ~100 | 1 | + NYC LL144, IL AIVA | No |
+| V2 | ~238 | 3 | + Education, Finance | Yes — Q&A only |
+| V3 | ~543 | All 8 | + CA, CO, EEOC | Yes — full retrieval pipeline |
 
----
-
-## Phased rollout
-
-### MVP — Employment & Hiring (ship now)
-- Claude ingests EU AI Act → extracts ~88 rules for Section 4(a)
-- Claude classifies user's system from free text
-- Claude reasons over intake + rules via tool use → structured gaps
-- Claude streams gap analysis via SSE
-- Claude writes PDF narrative
-- No Pinecone — 88 rules fit in context window
-
-### V1.1 — Education & Training (sprint 2)
-- Claude extracts ~70 rules for Section 3
-- New intake path for education AI
-- Same reasoning pipeline, new category filter
-
-### V1.2 — Essential Services / Finance (sprint 3)
-- Claude extracts ~80 rules for Section 5
-- Largest commercial opportunity — fintech and insurtech
-- Bias testing + financial model documentation requirements
-
-### V2 — Categories 4–5 + RAG Q&A
-- Biometric identification + Critical infrastructure
-- Add Pinecone for follow-up Q&A across all categories
-- ~300 rules total — SQL filtering keeps context manageable
-
-### V3 — All 8 categories + US jurisdictions
-- Law enforcement, migration, justice
-- Add NYC LL144, Illinois, Colorado
-- Full RAG pipeline for 500+ rules
-- Multi-jurisdiction conflict detection
-
----
-
-## Repository structure
-```
-complyai/
-├── frontend/         Next.js / React / Tailwind
-├── backend/
-│   ├── engine/       Law ingestion + system classification
-│   ├── ai/           Claude client, tool definitions, prompts, streaming
-│   ├── pdf/          PDFKit report generator
-│   ├── api/          Express routes (intake, classify, report, stream, pdf, chat)
-│   └── db/           PostgreSQL queries
-├── rules/            AI-extracted rules JSON — one file per category
-├── docs/             Team documentation
-├── design/           Figma links
-└── infra/            Docker, DB schema, env templates
-```
+At MVP scale (88 rules, ~15k tokens) the full filtered set fits in Claude's 200k context window — no chunking or RAG needed for the core check.
 
 ---
 
@@ -111,11 +145,13 @@ complyai/
 
 | Capability | Implementation |
 |---|---|
-| Document understanding | Claude ingests 144-page legal PDF, extracts structured rules |
-| System classification | Claude classifies user's AI from free text into Annex III category |
-| Legal reasoning | Claude reasons across 88–543 rules simultaneously |
-| Structured output | Tool use / function calling — machine-readable JSON guaranteed |
+| Document understanding | Claude ingests 144-page legal PDF, extracts structured versioned rules |
+| Prohibited AI detection | Claude classifies Article 5 use cases before any compliance routing |
+| System classification | Claude classifies user's AI from free text into Annex III + role |
+| Legal reasoning | Claude reasons across 88–543 rules with partial compliance assessment |
+| Structured output | Tool use enforces machine-readable JSON — no hallucinated citations |
 | Real-time AI | SSE streaming — gaps appear on dashboard as Claude identifies them |
+| Certainty modelling | Rules tagged with 5 certainty levels; score discounts ambiguous obligations |
+| LLM abstraction | Model routing layer — no business logic hardcodes any single provider |
 | RAG | Pinecone + Claude for follow-up Q&A (V2) |
-| Multi-document reasoning | Cross-jurisdiction conflict detection (V3) |
-| Scalability | Same architecture covers all 8 categories and any future jurisdiction |
+| Multi-jurisdiction | Cross-jurisdiction conflict detection (V3) |
